@@ -4,9 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application settings loaded from environment variables or .env."""
 
-    database_url: str = (
-        "mysql+pymysql://root:password@localhost:3306/p17_handshake"
-    )
+    database_url: str
     jwt_secret_key: str = "change-this-development-secret"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
