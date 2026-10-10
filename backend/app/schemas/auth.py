@@ -1,7 +1,17 @@
 import re
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, EmailStr
 
+class CompanySignupRequest(BaseModel):
+    company_name: str = Field(min_length=2, max_length=190)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=72)
+    location: str = Field(min_length=2, max_length=190)
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
 
 class StudentSignupRequest(BaseModel):
     """Data required to create a student account and profile."""
