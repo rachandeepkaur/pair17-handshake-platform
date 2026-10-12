@@ -8,3 +8,5 @@ export const JOB_CATEGORIES = [
 export function jobCategoryLabel(value) {
   return JOB_CATEGORIES.find((category) => category.value === value)?.label || value
 }
+
+export const APPLICATION_STATUSES = ['Pending', 'Reviewed', 'Declined']
