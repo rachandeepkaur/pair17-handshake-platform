@@ -1,30 +1,26 @@
-from fastapi import Depends, Header
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import UnauthorizedError
+from app.core.exceptions import ForbiddenError, UnauthorizedError
 from app.core.security import decode_access_token
-from app.database import SessionLocal
+from app.database import get_db
 from app.models.account import Account
 
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# auto_error=False so a missing token goes through our own 401 message
+# instead of FastAPI's default 403.
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
-    authorization: str | None = Header(default=None),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> Account:
-    if not authorization or not authorization.startswith("Bearer "):
+    if credentials is None or credentials.scheme.lower() != "bearer":
         raise UnauthorizedError("Missing or malformed authorization header")
 
-    token = authorization.removeprefix("Bearer ").strip()
     try:
-        payload = decode_access_token(token)
+        payload = decode_access_token(credentials.credentials)
     except ValueError as exc:
         raise UnauthorizedError(str(exc)) from exc
 
@@ -36,11 +32,11 @@ def get_current_user(
 
 def require_student(account: Account = Depends(get_current_user)) -> Account:
     if account.role != "student":
-        raise UnauthorizedError("Student account required")
+        raise ForbiddenError("Student account required")
     return account
 
 
 def require_company(account: Account = Depends(get_current_user)) -> Account:
     if account.role != "company":
-        raise UnauthorizedError("Company account required")
+        raise ForbiddenError("Company account required")
     return account

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
+import { errorMessage } from '../services/api'
 
-// Generic "fetch on mount, track loading/error" hook shared by any page
-// that loads data from the API (dashboards, lists, detail views).
+// Fetch on mount (and whenever `deps` change), tracking loading/error.
+// `setData` lets callers patch the result locally after a mutation instead
+// of refetching; `reload` refetches.
 export function useFetch(fetcher, deps = []) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -9,17 +11,21 @@ export function useFetch(fetcher, deps = []) {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const load = useCallback(() => {
+    let cancelled = false
     setLoading(true)
     setError('')
     fetcher()
-      .then(setData)
-      .catch((err) => setError(err?.response?.data?.detail || 'Failed to load data.'))
-      .finally(() => setLoading(false))
+      .then((result) => !cancelled && setData(result))
+      .catch((err) => !cancelled && setError(errorMessage(err, 'Failed to load data.')))
+      .finally(() => !cancelled && setLoading(false))
+    return () => {
+      cancelled = true
+    }
   }, deps)
 
-  useEffect(() => {
-    load()
-  }, [load])
+  // Cancelling on cleanup stops a slow earlier request from overwriting a
+  // newer one when deps change quickly (e.g. typing in a search box).
+  useEffect(() => load(), [load])
 
-  return { data, loading, error, reload: load }
+  return { data, loading, error, reload: load, setData }
 }

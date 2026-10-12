@@ -11,3 +11,6 @@ export const composeValidators =
   (...validators) =>
   (value) =>
     validators.reduce((error, validator) => error || validator(value), undefined)
+
+export const maxLength = (length, message) => (value) =>
+  value && String(value).length > length ? message || `Must be ${length} characters or fewer` : undefined

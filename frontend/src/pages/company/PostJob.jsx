@@ -1,12 +1,28 @@
-import { useNavigate } from 'react-router-dom'
-import FormField from '../../components/common/FormField'
+import { Link, useNavigate, useOutletContext } from 'react-router-dom'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import PageHeader from '../../components/ui/PageHeader'
+import FormField, { SelectField, TextAreaField } from '../../components/common/FormField'
 import { useForm } from '../../hooks/useForm'
 import { createJob } from '../../services/jobService'
 import { JOB_CATEGORIES } from '../../utils/constants'
-import { required } from '../../utils/validators'
+import { todayISO } from '../../utils/format'
+import { composeValidators, maxLength, minLength, required } from '../../utils/validators'
+
+function Section({ title, children }) {
+  return (
+    <div className="border-t border-gray-100 px-6 py-5 first:border-t-0">
+      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500">{title}</h2>
+      {children}
+    </div>
+  )
+}
+
+const nonNegative = (value) => (value !== '' && Number(value) < 0 ? 'Salary cannot be negative' : undefined)
 
 export default function PostJob() {
   const navigate = useNavigate()
+  const { reloadCompany } = useOutletContext()
 
   const { values, errors, isSubmitting, submitError, handleChange, handleBlur, handleSubmit } = useForm({
     initialValues: {
@@ -18,138 +34,152 @@ export default function PostJob() {
       is_remote: false,
       salary: '',
       skills_required: '',
+      posting_date: todayISO(),
       deadline: '',
     },
     validators: {
-      title: required('Title is required'),
-      city: required('City is required'),
-      deadline: required('Deadline is required'),
+      title: composeValidators(required('Job title is required'), minLength(2), maxLength(190)),
+      city: composeValidators(required('City is required'), maxLength(100)),
+      location: maxLength(190),
+      salary: nonNegative,
+      posting_date: required('Posting date is required'),
+      deadline: (value) =>
+        !value
+          ? 'Deadline is required'
+          : value < values.posting_date
+            ? 'Deadline must be on or after the posting date'
+            : undefined,
     },
     onSubmit: async (vals) => {
-      await createJob({
-        ...vals,
-        salary: vals.salary === '' ? null : Number(vals.salary),
-      })
-      navigate('/company/jobs')
+      const job = await createJob({ ...vals, salary: vals.salary === '' ? null : Number(vals.salary) })
+      reloadCompany()
+      navigate(`/company/jobs/${job.id}`)
     },
   })
 
-  const setCheckbox = (name) => (event) =>
-    handleChange({ target: { name, value: event.target.checked } })
+  const setCheckbox = (name) => (event) => handleChange({ target: { name, value: event.target.checked } })
 
   return (
-    <div className="mx-auto mt-10 max-w-xl rounded-lg border p-6 shadow-sm">
-      <h1 className="mb-6 text-xl font-semibold">Post a job</h1>
+    <div className="mx-auto max-w-2xl space-y-5">
+      <PageHeader title="Post a job" backTo="/company/jobs" backLabel="Back to jobs" />
+
       <form onSubmit={handleSubmit} noValidate>
-        <FormField
-          label="Title"
-          name="title"
-          value={values.title}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          error={errors.title}
-        />
+        <Card className="overflow-hidden">
+          <Section title="Basic information">
+            <FormField
+              label="Job title"
+              name="title"
+              value={values.title}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={errors.title}
+            />
+            <SelectField
+              label="Category"
+              name="category"
+              value={values.category}
+              onChange={handleChange}
+              options={JOB_CATEGORIES}
+            />
+          </Section>
 
-        <div className="mb-4">
-          <label htmlFor="category" className="mb-1 block text-sm font-medium text-gray-700">
-            Category
-          </label>
-          <select
-            id="category"
-            name="category"
-            value={values.category}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {JOB_CATEGORIES.map((category) => (
-              <option key={category.value} value={category.value}>
-                {category.label}
-              </option>
-            ))}
-          </select>
-        </div>
+          <Section title="Location">
+            <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+              <FormField
+                label="City"
+                name="city"
+                value={values.city}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={errors.city}
+              />
+              <FormField
+                label="Address or office (optional)"
+                name="location"
+                value={values.location}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={errors.location}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={values.is_remote}
+                onChange={setCheckbox('is_remote')}
+                className="h-4 w-4 rounded border-gray-300 text-brand-600"
+              />
+              This is a remote position
+            </label>
+          </Section>
 
-        <FormField
-          label="City"
-          name="city"
-          value={values.city}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          error={errors.city}
-        />
-        <FormField
-          label="Location (optional)"
-          name="location"
-          value={values.location}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          error={errors.location}
-        />
+          <Section title="Role details">
+            <TextAreaField
+              label="Description"
+              name="description"
+              rows={5}
+              value={values.description}
+              onChange={handleChange}
+              hint="Responsibilities, team, and what success looks like."
+            />
+            <FormField
+              label="Required skills (optional)"
+              name="skills_required"
+              value={values.skills_required}
+              onChange={handleChange}
+              hint="Comma-separated, e.g. Python, SQL, React"
+            />
+          </Section>
 
-        <div className="mb-4 flex items-center gap-2">
-          <input
-            id="is_remote"
-            type="checkbox"
-            checked={values.is_remote}
-            onChange={setCheckbox('is_remote')}
-          />
-          <label htmlFor="is_remote" className="text-sm text-gray-700">
-            This is a remote position
-          </label>
-        </div>
+          <Section title="Compensation & dates">
+            <FormField
+              label="Salary or hourly rate in USD (optional)"
+              name="salary"
+              type="number"
+              min="0"
+              step="0.01"
+              value={values.salary}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={errors.salary}
+            />
+            <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+              <FormField
+                label="Posting date"
+                name="posting_date"
+                type="date"
+                value={values.posting_date}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={errors.posting_date}
+              />
+              <FormField
+                label="Application deadline"
+                name="deadline"
+                type="date"
+                min={values.posting_date}
+                value={values.deadline}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={errors.deadline}
+              />
+            </div>
+          </Section>
 
-        <FormField
-          label="Salary (optional)"
-          name="salary"
-          type="number"
-          value={values.salary}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          error={errors.salary}
-        />
-        <FormField
-          label="Deadline"
-          name="deadline"
-          type="date"
-          value={values.deadline}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          error={errors.deadline}
-        />
-
-        <div className="mb-4">
-          <label htmlFor="description" className="mb-1 block text-sm font-medium text-gray-700">
-            Description (optional)
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            rows={4}
-            value={values.description}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <FormField
-          label="Skills, comma-separated (optional)"
-          name="skills_required"
-          value={values.skills_required}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          error={errors.skills_required}
-        />
-
-        {submitError && <p className="mb-4 text-sm text-red-600">{submitError}</p>}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-md bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {isSubmitting ? 'Posting...' : 'Post job'}
-        </button>
+          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/60 px-6 py-4">
+            {submitError && (
+              <p className="mr-auto text-sm text-red-600" role="alert">
+                {submitError}
+              </p>
+            )}
+            <Button as={Link} to="/company/jobs" variant="outline">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Posting…' : 'Post job'}
+            </Button>
+          </div>
+        </Card>
       </form>
     </div>
   )

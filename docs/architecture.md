@@ -1,9 +1,9 @@
 # Architecture & Implementation Notes — Pair 17
 
-Status snapshot of what is actually built and working, as of the company
-signup/login milestone. This documents the **current** code, not the full
-planned feature set (see `README.md` for setup/run commands and the overall
-folder layout).
+Status snapshot of what is built and working: the **company portal** is
+feature-complete against the Lab 1 Part A company rubric. The student portal,
+seed generator, and AI assistant (Parts B/C) are not built yet. See
+`README.md` for setup/run commands.
 
 ## 1. Stack
 
@@ -11,232 +11,193 @@ folder layout).
 |---|---|
 | Backend | FastAPI (Python 3.12), SQLAlchemy 2.0 ORM, Pydantic v2 |
 | Database | MySQL 8, accessed via PyMySQL |
-| Auth | bcrypt password hashing (via passlib), JWT (via python-jose) |
-| Frontend | React 18 + Vite, React Router, Axios, Tailwind CSS |
+| Auth | bcrypt password hashing (passlib), JWT bearer tokens (python-jose) |
+| Frontend | React 18 + Vite, React Router, Axios, Tailwind CSS, lucide-react icons |
 
-## 2. What's implemented so far
+## 2. Rubric coverage — company features
 
-**Backend — company signup and shared login**:
-- `POST /auth/signup/company` — create a company account
-- `POST /auth/login` — authenticate a student *or* company account (same endpoint for both roles)
-- JWT issuance with role embedded in the token
-- Role-gated request dependencies (`require_student`, `require_company`) ready for future protected routes
+| Lab 1 requirement | Where it lives |
+|---|---|
+| Signup with company name, email, password, location; sign in/out | `POST /auth/signup/company`, `POST /auth/login`; `/signup/company`, `/login`, sign-out in the top-bar menu |
+| Dashboard for posting jobs (title, posting date, deadline, location, salary, description, category) | `POST /jobs`; `/company/dashboard`, `/company/jobs/new` |
+| View owned job postings and the students who applied to each | `GET /jobs/mine`, `GET /jobs/{id}/applications`; `/company/jobs`, `/company/jobs/:id`, `/company/applicants` |
+| Open a student profile, preview the PDF resume, set status Pending/Reviewed/Declined | `GET /applications/{id}`, `GET /applications/{id}/resume`, `PATCH /applications/{id}/status`; `/company/applications/:id` |
+| Company profile (name, location, description, contact, picture) with updates | `GET/PUT /companies/me`, `POST /companies/me/picture`; `/company/profile` |
+| Students tab: search by name, college, or skillset and view profiles | `GET /students`, `GET /students/{id}`; `/company/students`, `/company/students/:id` |
+| Events tab: post events (name, description, date, time, location, eligibility); view registered students and their profiles | `POST /events`, `GET /events/mine`, `GET /events/{id}/registrations`; `/company/events`, `/company/events/new`, `/company/events/:id` |
+| Validate input, encrypt passwords, exception handling, restrict to authorized actions | Pydantic schemas + client-side validators; bcrypt; `core/exceptions.py`; `require_company` + ownership checks (§5) |
+| Axios with loading and error states; separate components, pages, services | `services/*`, `hooks/useFetch.js`, skeleton loaders + `ErrorMessage` on every page |
+| Swagger UI | `http://localhost:9170/docs` — click **Authorize** and paste the `access_token` from `/auth/login` |
 
-**Frontend — company signup and login UI**:
-- `/signup/company` — company signup form
-- `/login` — shared login form (routes to `/company/dashboard` or `/student/dashboard` based on the role returned by the API)
-- `/company/dashboard` — minimal placeholder page with a working sign-out button
-- Auth session state (`AuthContext`) persisted in `localStorage`
-- A small reusable form layer (`useForm` hook + `FormField` component) so the student signup form can reuse the same plumbing later
-
-**Not implemented yet** (scaffolded as empty files, per the project's full planned structure): student signup endpoint/page, all profile/job/application/event/registration/preference features, the AI assistant, file uploads. The `Student` and `StudentSignupRequest` model/schema already exist (see §4) but have no router wired up yet.
+Messages, Team & Permissions, and Settings appear in the sidebar under
+**Coming soon**. They have no backend and are not part of the rubric.
 
 ## 3. Database design
 
 ### Why a shared `accounts` table
 
-Students and companies log in through **one** endpoint (`POST /auth/login`)
-rather than two separate forms, because there's no UX reason to ask "are you
-a student or a company?" before login when the backend can resolve it from
-the email alone. That only works cleanly if email uniqueness is enforced
-*across both roles* — which requires one shared table, not two independent
-ones with duplicated `email`/`password_hash` columns.
+Students and companies sign in through **one** endpoint, resolved by email.
+That requires email uniqueness *across both roles*, so login credentials live
+in one table and each role has a 1:1 profile table keyed on `account_id`.
 
 ```
-accounts (id, email UNIQUE, password_hash, role ENUM('student','company'), created_at)
-    │ 1:1                                │ 1:1
-    ▼                                    ▼
-students (account_id PK/FK, name, college_name, ...)   companies (account_id PK/FK, company_name, location, ...)
+accounts (id, email UNIQUE, password_hash, role ENUM('student','company'))
+    │ 1:1                                  │ 1:1
+    ▼                                      ▼
+students (account_id PK/FK, …)        companies (account_id PK/FK, …)
+    │                                      │ 1:N
+    │ 1:N                                  ├──▶ jobs ──1:N──▶ applications ◀──N:1── students
+    └──────────────────────────────────────┴──▶ events ─1:N─▶ registrations ◀─N:1─ students
 ```
 
-- `accounts.role` decides which profile table to join against.
-- `students.account_id` / `companies.account_id` are both the primary key *and* the foreign key — there is no separate surrogate ID on the profile tables.
-- Login flow: one query against `accounts` by email → verify bcrypt hash → issue a JWT with `{sub: account_id, role}`.
+| Table | Status |
+|---|---|
+| `accounts`, `companies`, `jobs`, `applications`, `events`, `registrations` | ✅ model + endpoints |
+| `students` | ✅ model; read endpoints (search, profile). No student signup yet |
+| `saved_items`, `preferences` | schema only (for the Part B assistant tools) |
 
-### Full schema (`backend/db/schema.sql`)
+Schema details worth knowing: `jobs.category` is
+`ENUM('full_time','part_time','on_campus','internship')`;
+`applications.status` is `ENUM('Pending','Reviewed','Declined')` and unique
+per `(student_id, job_id)`; every child row cascades on delete.
 
-| Table | Purpose | Status |
-|---|---|---|
-| `accounts` | Shared login (email, password hash, role) | ✅ implemented |
-| `students` | Student profile, 1:1 with `accounts` | ✅ model exists, no endpoint yet |
-| `companies` | Company profile, 1:1 with `accounts` | ✅ implemented |
-| `jobs` | Job postings | schema only |
-| `applications` | Student job applications + resume path + status | schema only |
-| `events` | Company-posted events | schema only |
-| `registrations` | Student event registrations | schema only |
-| `saved_items` | Saved jobs/events (backs the `save_job_or_event` assistant tool) | schema only |
-| `preferences` | Per-student search preferences (backs `get_student_preferences`) | schema only |
-
-Notable schema details:
-- `jobs.category` is a MySQL `ENUM('full_time','part_time','on_campus','internship')`.
-- `jobs` has a `FULLTEXT` index on `title, description, skills_required` for search.
-- `applications.status` is `ENUM('Pending','Reviewed','Declined')`, unique per `(student_id, job_id)`.
-- Every student-owned table cascades on delete from `accounts.id`.
-
-## 4. Backend code walkthrough
+## 4. Backend layout
 
 ```
 backend/app/
-├── config.py          Settings (pydantic-settings), loads .env from the
-│                      project root regardless of the process's cwd
-├── database.py        SQLAlchemy engine/session, declarative Base, get_db()
-├── dependencies.py     get_current_user / require_student / require_company
+├── config.py           Settings; loads .env from the project root regardless of cwd
+├── database.py         engine, SessionLocal, Base, get_db()
+├── dependencies.py      get_current_user (HTTP Bearer), require_student, require_company
 ├── core/
-│   ├── security.py    bcrypt hash/verify, JWT create/decode
-│   └── exceptions.py  AppError hierarchy + a single FastAPI exception handler
-├── models/
-│   ├── __init__.py    imports Account, Company, Student so SQLAlchemy
-│   │                  registers all mapped classes before any relationship
-│   │                  with a forward-reference string (e.g. "Student | None")
-│   │                  needs to resolve
-│   ├── account.py     Account + AccountRole enum
-│   ├── company.py     Company profile
-│   └── student.py     Student profile
-├── schemas/
-│   ├── auth.py        CompanySignupRequest, StudentSignupRequest, LoginRequest,
-│   │                  TokenResponse, AccountResponse
-│   └── company.py     CompanyOut (signup response)
-├── routers/
-│   └── auth.py        POST /auth/signup/company, POST /auth/login
-└── main.py             FastAPI app, CORS, exception handlers, router registration
+│   ├── security.py     bcrypt hash/verify, JWT create/decode
+│   └── exceptions.py   AppError hierarchy + handlers (see §6)
+├── models/             Account, Company, Student, Job, Application, Event, Registration
+│   └── __init__.py     imports every model so string relationships ("Student") resolve
+├── schemas/            Pydantic request/response models; common.py has Page[T] and
+│                       shared trim/blank-to-NULL validators
+├── services/           all queries and business rules; routers stay thin
+│   ├── job_service.py          create, list with applicant counts, owned-job lookup
+│   ├── application_service.py  list/filter, detail, status update, resume path
+│   ├── event_service.py        create, list with registration counts, registrants
+│   ├── student_service.py      paginated search, profile
+│   ├── company_service.py      profile read/update, picture, completion %
+│   └── file_service.py         upload validation, safe paths (see §7)
+└── routers/            auth, companies, jobs, applications, events, students, dashboards
 ```
 
-### `config.py`
+### API reference (company portal)
 
-Reads `PAIR`, `PORT_BASE`, `DB_PREFIX`, `SEED`, `CITY_SET`, DB credentials,
-JWT settings, and Ollama settings from a `.env` file. The `.env` path is
-resolved **relative to `config.py`'s own file location** (two directories up
-to the project root), not the process's working directory — this matters
-because `uvicorn` is normally started from `backend/`, where no `.env`
-exists; resolving by cwd would silently fall back to defaults with an empty
-DB password.
+All routes except `/auth/*` need `Authorization: Bearer <token>`.
 
-### `core/security.py`
+| Method & path | Purpose |
+|---|---|
+| `POST /auth/signup/company` | Create company account → 201, or 409 if the email exists |
+| `POST /auth/login` | Any role → `{access_token, token_type, role}`; 401 on bad credentials |
+| `GET /companies/me` · `PUT /companies/me` | Read / update company profile |
+| `POST /companies/me/picture` | Multipart image upload (JPEG/PNG/WebP, ≤ 2 MB) |
+| `POST /jobs` | Post a job; `posting_date` defaults to today, `deadline ≥ posting_date` |
+| `GET /jobs/mine` | Own postings, each with `applicant_count` |
+| `GET /jobs/{id}` | One owned posting |
+| `GET /jobs/{id}/applications?status=` | Applicants to one owned posting |
+| `GET /applications/company?job_id=&status=` | All applicants across the company's postings |
+| `GET /applications/{id}` | Application + applicant's full student profile |
+| `PATCH /applications/{id}/status` | `{status: "Pending" \| "Reviewed" \| "Declined"}` |
+| `GET /applications/{id}/resume` | The applicant's PDF, `Content-Disposition: inline` |
+| `POST /events` · `GET /events/mine` · `GET /events/{id}` | Create / list (with `registration_count`) / read own events; date cannot be in the past |
+| `GET /events/{id}/registrations` | Students registered for an owned event |
+| `GET /students?q=&college=&skills=&major=&limit=&offset=` | Paginated search; `skills` is comma-separated and matches *any* |
+| `GET /students/{id}` | Student profile |
+| `GET /dashboards/company` | Counts, status breakdown, profile completion, recent applicants |
 
-```python
-hash_password(password: str) -> str
-verify_password(plain_password: str, password_hash: str) -> bool
-create_access_token(subject: str, role: str, expires_delta: timedelta | None = None) -> str
-decode_access_token(token: str) -> dict
-```
+## 5. Authorization rules
 
-`create_access_token` takes `subject` (the account ID, as a string) rather
-than an int — JWT `sub` claims are conventionally strings. The JWT payload
-is `{"sub": subject, "role": role, "exp": ...}`.
+- **No/invalid/expired token → 401.** The frontend's Axios interceptor clears
+  the session and redirects to `/login`.
+- **Wrong role → 403** (`require_company` / `require_student`).
+- **Another company's job, application, or event → 404**, not 403. Lookups go
+  through `get_owned_job` / `get_owned_application` / `get_owned_event`, which
+  treat "doesn't exist" and "not yours" the same so IDs can't be probed.
+- Students endpoints accept any signed-in role, because the rubric lets
+  students browse students too.
 
-### `models/account.py` — the `role` enum gotcha
+## 6. Error handling
 
-```python
-class AccountRole(str, PyEnum):
-    STUDENT = "student"
-    COMPANY = "company"
+`core/exceptions.py` registers handlers so every error body is
+`{"detail": "<one readable message>"}`, which the frontend shows directly:
 
-role: Mapped[AccountRole] = mapped_column(
-    Enum(AccountRole, name="account_role",
-         values_callable=lambda enum_cls: [m.value for m in enum_cls]),
-    nullable=False,
-)
-```
+| Source | Status | Body |
+|---|---|---|
+| `AppError` subclasses (`BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`) | 400/401/403/404/409 | the error's message |
+| Pydantic validation | 422 | first error as `field: message`, plus the full `errors` list |
+| Database `IntegrityError` | 409 | generic conflict message (details logged) |
+| Anything else | 500 | generic message; traceback logged, never sent to the client |
 
-By default, SQLAlchemy's `Enum` type stores/matches a Python `Enum` by its
-**member name** (`STUDENT`, `COMPANY`), but the MySQL column is
-`ENUM('student','company')` (lowercase values), and the rest of the codebase
-passes plain lowercase strings (`role="company"`, `account.role != "student"`).
-`values_callable` tells SQLAlchemy to use `.value` instead of `.name`,
-matching both the DB column and the plain-string comparisons everywhere else.
-Without it, reading a row back raises `LookupError: 'company' is not among
-the defined enum values`.
+## 7. File handling
 
-### `dependencies.py`
+- **Resumes are private.** They are stored under `backend/uploads/resumes/`
+  and served **only** via `GET /applications/{id}/resume`, after the
+  ownership check. `resolve_resume` refuses any path that resolves outside
+  that folder. The frontend fetches the PDF as a blob with the auth header
+  and previews it in an `<iframe>` through an object URL (a plain
+  `<iframe src>` can't send the header).
+- **Profile pictures are public.** They are mounted at
+  `/uploads/profile_pictures/` and validated by their leading bytes (JPEG/PNG/WebP
+  signature), not the client-supplied content type, and capped at 2 MB. Files
+  get random names; the previous picture is deleted on replacement.
+- `backend/uploads/` is gitignored.
 
-- `get_db()` — one SQLAlchemy session per request, always closed.
-- `get_current_user()` — reads the `Authorization: Bearer <token>` header, decodes the JWT, loads the `Account`.
-- `require_student` / `require_company` — thin wrappers that additionally check `account.role`, for gating future endpoints.
-
-### `routers/auth.py`
-
-```
-POST /auth/signup/company
-  body: { company_name, email, password, location }
-  → 201 { account_id, company_name, email, location }
-  → 409 if the email is already registered
-
-POST /auth/login
-  body: { email, password }
-  → 200 { access_token, token_type: "bearer", role }
-  → 401 on any mismatch (account not found or wrong password —
-        same error message either way, so the response can't be used
-        to enumerate which emails are registered)
-```
-
-Signup writes two rows in one transaction: an `Account` row, then a
-`Company` row referencing `account.id` (obtained via `db.flush()` before the
-second insert, since the FK needs the generated `account.id`).
-
-## 5. Frontend code walkthrough
+## 8. Frontend layout
 
 ```
 frontend/src/
-├── services/
-│   ├── api.js             Axios instance; attaches the JWT from
-│   │                      localStorage to every request via an interceptor
-│   └── authService.js     signupCompany(), login() — thin wrappers over api.js
-├── context/
-│   └── AuthContext.jsx    Holds {token, role}; persists to localStorage;
-│                          login()/logout(); logout is purely client-side
-│                          (JWTs are stateless — nothing to invalidate server-side)
-├── hooks/
-│   ├── useAuth.js         useContext(AuthContext) with a guard
-│   └── useForm.js         Generic form state/validation hook — shared by
-│                          every current and future auth/profile form
-├── utils/
-│   └── validators.js      required(), isEmail(), minLength(), composeValidators()
-├── components/common/
-│   └── FormField.jsx      One label+input+error component, used by every form
-├── routes/
-│   ├── AppRoutes.jsx      Route table
-│   └── ProtectedRoute.jsx Redirects to /login if unauthenticated or wrong role
-└── pages/
-    ├── auth/
-    │   ├── Login.jsx          Shared login for both roles
-    │   └── CompanySignup.jsx  Company signup form
-    └── company/
-        └── Dashboard.jsx      Placeholder with a working "Sign out" button
+├── services/        api.js (token + 401 interceptors, apiUrl, errorMessage),
+│                    company/job/application/event/student/auth services
+├── hooks/           useAuth, useForm (form state + validation), useFetch
+│                    (loading/error, reload, local setData patching)
+├── utils/           constants (categories, statuses), validators, format
+│                    (dates parsed as local, en-US currency/time)
+├── components/
+│   ├── ui/          Button, Card, StatCard, StatusBadge, Tabs, PageHeader,
+│   │                Avatar, SkillTags, Skeleton, EmptyState
+│   ├── common/      Sidebar, Navbar, FormField (+TextArea/Select), Modal +
+│   │                ConfirmDialog, Pagination, ErrorMessage, ComingSoon
+│   ├── layout/      CompanyLayout — shell; shares the dashboard summary with
+│   │                pages via outlet context (`company`, `reloadCompany`)
+│   ├── applications/ ApplicantsTable, StatusUpdater, ResumePreview
+│   ├── profile/     StudentProfileView, CompanyProfileForm, ProfilePicture
+│   ├── students/    StudentCard
+│   └── events/      RegistrantList
+└── pages/company/   Dashboard, MyJobs, PostJob, JobDetail, Applicants,
+                     ApplicantProfile, CompanyEvents, CreateEvent,
+                     EventRegistrations, StudentSearch, StudentProfile,
+                     Analytics, CompanyProfile, Messages/Team/Settings (coming soon)
 ```
 
-### Why one `useForm` + `FormField` pair instead of one-off form logic
+UX conventions applied across pages: skeleton loaders while loading, an
+`ErrorMessage` for failed requests, a written empty state for every list,
+inline field validation that mirrors the server rules, confirmation before
+declining an applicant, status shown as a dot plus text label (never color
+alone), visible keyboard focus rings, a skip-to-content link, and layouts that
+reflow to one column at phone width.
 
-`CompanySignup.jsx` is built entirely from `useForm` (values/errors/submit
-state) + `validators.js` (composable field rules) + `FormField` (the
-rendered input). Building the student signup form later is just a different
-`initialValues`/`validators` object and a different list of `<FormField>`s —
-no new form infrastructure needed.
+## 9. Known gaps
 
-### Auth flow end to end
+- **No seed data yet.** The rubric's generator (300 jobs, 1,500 applications,
+  200 students, 50 companies, 100 events across `CITY_SET` with
+  `random_state = SEED`) is not written; `CITY_SET` in `.env` is still a
+  placeholder.
+- **Student-side features** (signup, applying with a resume upload, event
+  registration) aren't built, so applications and registrations currently
+  enter the database only through fixtures or the future seed script.
+- Job postings can't be edited or deleted. This isn't required by the rubric.
+- Student search uses `LIKE '%term%'` filters. That's fine at the rubric's 200
+  students; the `FULLTEXT` index on `jobs` is unused until job search is
+  built.
 
-1. `CompanySignup` submits to `POST /auth/signup/company` directly via `authService` (signup doesn't touch session state, so it doesn't go through `AuthContext`).
-2. `Login` submits to `POST /auth/login` via `AuthContext.login()`, which stores `{token, role}` and persists them to `localStorage`.
-3. `api.js`'s request interceptor attaches `Authorization: Bearer <token>` to every subsequent request automatically.
-4. `ProtectedRoute` reads `{isAuthenticated, role}` from `AuthContext` and redirects to `/login` if the viewer is unauthenticated or has the wrong role for that route.
-5. Signing out calls `AuthContext.logout()`, which clears the token; `ProtectedRoute` then redirects away from any page that required auth on its next render — no manual navigation needed.
+## 10. Environment configuration
 
-## 6. Known gaps / inconsistencies worth tracking
-
-- `schemas/company.py` (`CompanyOut`) and `models/company.py` still use the
-  older `Column(...)` SQLAlchemy 1.x-style syntax, while `models/account.py`
-  and `models/student.py` use the newer `Mapped[...]` / `mapped_column(...)`
-  style. Both work today; worth unifying later for consistency.
-- `schemas/auth.py` defines `StudentSignupRequest` and `AccountResponse`,
-  but no router uses them yet — they're groundwork for the student signup
-  endpoint, not currently reachable from any route.
-- `CITY_SET` in `.env` is still a placeholder (`city_one,city_two,city_three`)
-  pending the real three cities assigned to pair 17 on Canvas.
-
-## 7. Environment configuration reference
-
-See `.env.example` / `frontend/.env.example` for the full list. Backend
-`config.py` reads (via `pydantic-settings`): `PAIR`, `PORT_BASE`,
-`DB_PREFIX`, `SEED`, `CITY_SET`, `DB_HOST`, `DB_PORT`, `DB_USER`,
-`DB_PASSWORD`, `DB_NAME`, `JWT_SECRET`, `JWT_ALGORITHM`,
+See `.env.example` / `frontend/.env.example`. The backend reads `PAIR`,
+`PORT_BASE`, `DB_PREFIX`, `SEED`, `CITY_SET`, `DB_HOST`, `DB_PORT`,
+`DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET`, `JWT_ALGORITHM`,
 `JWT_EXPIRE_MINUTES`, `OLLAMA_MODEL`, `OLLAMA_HOST`. The frontend reads
-`VITE_API_URL` (Vite only exposes env vars prefixed `VITE_`).
+`VITE_API_URL`.
