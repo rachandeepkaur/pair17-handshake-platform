@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.exceptions import register_exception_handlers
-from app.routers import auth
+from app.routers import auth, dashboards, jobs
 
 app = FastAPI(title="Handshake Platform API (Pair 17)")
 
@@ -17,3 +17,5 @@ app.add_middleware(
 register_exception_handlers(app)
 
 app.include_router(auth.router)
+app.include_router(jobs.router)
+app.include_router(dashboards.router)

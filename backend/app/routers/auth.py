@@ -49,5 +49,5 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse
     if account is None or not verify_password(payload.password, account.password_hash):
         raise UnauthorizedError("Invalid email or password")
 
-    token = create_access_token(account_id=account.id, role=account.role)
+    token = create_access_token(subject=str(account.id), role=account.role)
     return TokenResponse(access_token=token, role=account.role)
