@@ -21,7 +21,11 @@ class Account(Base):
     email: Mapped[str] = mapped_column(String(190), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[AccountRole] = mapped_column(
-        Enum(AccountRole, name="account_role"),
+        Enum(
+            AccountRole,
+            name="account_role",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
         nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(

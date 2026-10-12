@@ -8,3 +8,10 @@ class CompanyOut(BaseModel):
     company_name: str
     email: str
     location: str
+
+
+class CompanyDashboardOut(BaseModel):
+    company_name: str
+    location: str
+    email: str
+    total_jobs: int
