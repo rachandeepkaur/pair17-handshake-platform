@@ -8,7 +8,9 @@ from app.schemas.student import StudentProfileOut, StudentSummary
 from app.services.file_service import picture_url
 
 
-def _like(value: str) -> str:
+def like_pattern(value: str) -> str:
+    """SQL LIKE pattern matching `value` anywhere, with wildcards escaped."""
+
     escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     return f"%{escaped}%"
 
@@ -40,16 +42,16 @@ def search_students(
 ) -> Page[StudentSummary]:
     query = select(Student)
     if q:
-        query = query.where(Student.name.ilike(_like(q)))
+        query = query.where(Student.name.ilike(like_pattern(q)))
     if college:
-        query = query.where(Student.college_name.ilike(_like(college)))
+        query = query.where(Student.college_name.ilike(like_pattern(college)))
     if major:
-        query = query.where(Student.major.ilike(_like(major)))
+        query = query.where(Student.major.ilike(like_pattern(major)))
     if skills:
         # Comma-separated input matches students who have ANY of the skills.
         terms = [term.strip() for term in skills.split(",") if term.strip()]
         if terms:
-            query = query.where(or_(*(Student.skills.ilike(_like(term)) for term in terms)))
+            query = query.where(or_(*(Student.skills.ilike(like_pattern(term)) for term in terms)))
 
     total = db.scalar(select(func.count()).select_from(query.subquery()))
     rows = db.scalars(query.order_by(Student.name).limit(limit).offset(offset)).all()

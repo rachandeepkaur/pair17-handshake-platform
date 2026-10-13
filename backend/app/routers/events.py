@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.dependencies import get_db, require_company
-from app.models.account import Account
+from app.dependencies import CompanyContext, get_db, require_company, require_permission
 from app.schemas.event import EventCreate, EventOut, RegistrationOut
 from app.services import event_service
 
@@ -13,26 +12,26 @@ router = APIRouter(prefix="/events", tags=["events"])
 def create_event(
     payload: EventCreate,
     db: Session = Depends(get_db),
-    company: Account = Depends(require_company),
+    ctx: CompanyContext = Depends(require_permission("events:write")),
 ) -> EventOut:
-    return event_service.create_event(db, company.id, payload)
+    return event_service.create_event(db, ctx.company_id, payload)
 
 
 @router.get("/mine", response_model=list[EventOut], summary="List the company's own events")
 def list_my_events(
     db: Session = Depends(get_db),
-    company: Account = Depends(require_company),
+    ctx: CompanyContext = Depends(require_company),
 ) -> list[EventOut]:
-    return event_service.list_company_events(db, company.id)
+    return event_service.list_company_events(db, ctx.company_id)
 
 
 @router.get("/{event_id}", response_model=EventOut, summary="Get one of the company's events")
 def get_my_event(
     event_id: int,
     db: Session = Depends(get_db),
-    company: Account = Depends(require_company),
+    ctx: CompanyContext = Depends(require_company),
 ) -> EventOut:
-    return event_service.get_event_out(db, company.id, event_id)
+    return event_service.get_event_out(db, ctx.company_id, event_id)
 
 
 @router.get(
@@ -43,6 +42,6 @@ def get_my_event(
 def list_event_registrations(
     event_id: int,
     db: Session = Depends(get_db),
-    company: Account = Depends(require_company),
+    ctx: CompanyContext = Depends(require_company),
 ) -> list[RegistrationOut]:
-    return event_service.list_registrations(db, company.id, event_id)
+    return event_service.list_registrations(db, ctx.company_id, event_id)

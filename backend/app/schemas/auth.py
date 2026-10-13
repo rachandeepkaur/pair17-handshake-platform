@@ -63,3 +63,9 @@ class AccountResponse(BaseModel):
     id: int
     email: str
     role: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    # bcrypt only uses the first 72 bytes, so cap new passwords there.
+    new_password: str = Field(min_length=8, max_length=72)

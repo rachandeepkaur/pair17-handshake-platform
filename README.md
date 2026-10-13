@@ -38,6 +38,14 @@ Edit `.env` with your local MySQL credentials and the real `CITY_SET` for pair 1
 mysql -u root -p < backend/db/schema.sql
 ```
 
+Upgrading a database created before team accounts and messaging existed? Apply
+the migration instead (safe to re-run). It adds the team and messaging tables
+and makes each existing company's signup account its owner:
+
+```bash
+mysql -u root -p < backend/db/migrations/001_team_messages.sql
+```
+
 Once the seed generator is implemented, populate sample data with:
 
 ```bash

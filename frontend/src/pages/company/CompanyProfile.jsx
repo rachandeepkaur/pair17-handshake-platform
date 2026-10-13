@@ -9,6 +9,7 @@ import ErrorMessage from '../../components/common/ErrorMessage'
 import CompanyProfileForm from '../../components/profile/CompanyProfileForm'
 import ProfilePicture from '../../components/profile/ProfilePicture'
 import { useFetch } from '../../hooks/useFetch'
+import { usePermissions } from '../../hooks/usePermissions'
 import { getProfile, updateProfile, uploadPicture } from '../../services/companyService'
 import { getMyJobs } from '../../services/jobService'
 import { getMyEvents } from '../../services/eventService'
@@ -48,6 +49,8 @@ export default function CompanyProfile() {
   const jobs = useFetch(getMyJobs, [])
   const events = useFetch(getMyEvents, [])
   const [editing, setEditing] = useState(false)
+  const { can } = usePermissions()
+  const canEdit = can('profile:write')
   const [saved, setSaved] = useState(false)
 
   const applyUpdate = (updated) => {
@@ -75,7 +78,7 @@ export default function CompanyProfile() {
         title="Company Profile"
         description="This is how students see your company."
         actions={
-          !editing && (
+          !editing && canEdit && (
             <Button
               variant="outline"
               icon={Pencil}
@@ -102,7 +105,7 @@ export default function CompanyProfile() {
             <div className="h-28 bg-gradient-to-r from-brand-600 via-brand-500 to-accent-500" aria-hidden="true" />
             <div className="px-6 pb-6">
               <div className="-mt-10 mb-4 rounded-2xl bg-white p-1 shadow-card sm:inline-block">
-                <ProfilePicture name={profile.company_name} pictureUrl={profile.profile_picture_url} onUpload={handleUpload} />
+                <ProfilePicture name={profile.company_name} pictureUrl={profile.profile_picture_url} onUpload={handleUpload} canEdit={canEdit} />
               </div>
 
               {editing ? (

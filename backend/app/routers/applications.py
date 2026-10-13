@@ -2,8 +2,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.dependencies import get_db, require_company
-from app.models.account import Account
+from app.dependencies import CompanyContext, get_db, require_company, require_permission
 from app.schemas.application import (
     ApplicationDetailOut,
     ApplicationOut,
@@ -22,12 +21,13 @@ router = APIRouter(prefix="/applications", tags=["applications"])
 )
 def list_company_applications(
     job_id: int | None = None,
+    student_id: int | None = None,
     status: ApplicationStatus | None = None,
     db: Session = Depends(get_db),
-    company: Account = Depends(require_company),
+    ctx: CompanyContext = Depends(require_company),
 ) -> list[ApplicationOut]:
     return application_service.list_company_applications(
-        db, company.id, job_id=job_id, status=status
+        db, ctx.company_id, job_id=job_id, student_id=student_id, status=status
     )
 
 
@@ -39,9 +39,9 @@ def list_company_applications(
 def get_application(
     application_id: int,
     db: Session = Depends(get_db),
-    company: Account = Depends(require_company),
+    ctx: CompanyContext = Depends(require_company),
 ) -> ApplicationDetailOut:
-    return application_service.get_application_detail(db, company.id, application_id)
+    return application_service.get_application_detail(db, ctx.company_id, application_id)
 
 
 @router.patch(
@@ -53,9 +53,9 @@ def update_application_status(
     application_id: int,
     payload: ApplicationStatusUpdate,
     db: Session = Depends(get_db),
-    company: Account = Depends(require_company),
+    ctx: CompanyContext = Depends(require_permission("applicants:write")),
 ) -> ApplicationOut:
-    return application_service.update_status(db, company.id, application_id, payload.status)
+    return application_service.update_status(db, ctx.company_id, application_id, payload.status)
 
 
 @router.get(
@@ -66,9 +66,9 @@ def update_application_status(
 def get_resume(
     application_id: int,
     db: Session = Depends(get_db),
-    company: Account = Depends(require_company),
+    ctx: CompanyContext = Depends(require_company),
 ) -> FileResponse:
-    path = application_service.resume_file(db, company.id, application_id)
+    path = application_service.resume_file(db, ctx.company_id, application_id)
     return FileResponse(
         path,
         media_type="application/pdf",

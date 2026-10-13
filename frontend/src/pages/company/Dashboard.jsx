@@ -10,7 +10,8 @@ import {
   Plus,
   CalendarPlus,
   UserSearch,
-  Building2,
+  UserPlus,
+  MessageSquare,
   ArrowRight,
   Clock,
 } from 'lucide-react'
@@ -23,16 +24,17 @@ import Button from '../../components/ui/Button'
 import EmptyState from '../../components/ui/EmptyState'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import { useFetch } from '../../hooks/useFetch'
+import { usePermissions } from '../../hooks/usePermissions'
 import { getMyJobs } from '../../services/jobService'
 import { getMyEvents } from '../../services/eventService'
 import { APPLICATION_STATUSES } from '../../utils/constants'
 import { daysFromToday, formatDate, formatTime, isOnOrAfterToday } from '../../utils/format'
 
 const QUICK_ACTIONS = [
-  { to: '/company/jobs/new', label: 'Post a Job', icon: Plus },
-  { to: '/company/events/new', label: 'Create Event', icon: CalendarPlus },
+  { to: '/company/jobs/new', label: 'Post a Job', icon: Plus, permission: 'jobs:write' },
+  { to: '/company/events/new', label: 'Create Event', icon: CalendarPlus, permission: 'events:write' },
   { to: '/company/students', label: 'Find Students', icon: UserSearch },
-  { to: '/company/profile', label: 'Edit Profile', icon: Building2 },
+  { to: '/company/team', label: 'Invite Teammate', icon: UserPlus, permission: 'team:manage' },
 ]
 
 const STATUS_BAR = { Pending: 'bg-amber-500', Reviewed: 'bg-brand-500', Declined: 'bg-red-400' }
@@ -47,6 +49,7 @@ function ViewAll({ to }) {
 
 export default function CompanyDashboard() {
   const { company, companyError, reloadCompany } = useOutletContext()
+  const { can } = usePermissions()
   const jobs = useFetch(getMyJobs, [])
   const events = useFetch(getMyEvents, [])
 
@@ -79,7 +82,7 @@ export default function CompanyDashboard() {
         <h1 className="mt-1 text-2xl font-bold lg:text-3xl">{company?.company_name || 'Your company'}</h1>
         <p className="mt-1 text-sm text-brand-100">Here’s what’s happening with your recruiting today.</p>
         <div className="mt-5 flex flex-wrap gap-2">
-          {QUICK_ACTIONS.map(({ to, label, icon: Icon }) => (
+          {QUICK_ACTIONS.filter(({ permission }) => !permission || can(permission)).map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
@@ -181,9 +184,11 @@ export default function CompanyDashboard() {
                   title="Your first job post is one step away."
                   description="Publish a role to start receiving applicants."
                   action={
-                    <Button as={Link} to="/company/jobs/new" icon={Plus}>
-                      Post a Job
-                    </Button>
+                    can('jobs:write') && (
+                      <Button as={Link} to="/company/jobs/new" icon={Plus}>
+                        Post a Job
+                      </Button>
+                    )
                   }
                 />
               ) : closingSoon.length === 0 ? (
@@ -218,6 +223,21 @@ export default function CompanyDashboard() {
         </div>
 
         <div className="space-y-6">
+          <Link to="/company/messages" className="block rounded-2xl">
+            <Card className="flex items-center gap-3 p-5 transition-shadow hover:shadow-card-hover">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                <MessageSquare size={20} aria-hidden="true" />
+              </span>
+              <span className="flex-1">
+                <span className="block font-semibold text-gray-900">Messages</span>
+                <span className="block text-sm text-gray-500">
+                  {company ? `${company.unread_messages} unread from students` : 'Loading…'}
+                </span>
+              </span>
+              <ArrowRight size={18} className="text-gray-400" aria-hidden="true" />
+            </Card>
+          </Link>
+
           <Card>
             <CardHeader title="Applications by status" />
             <div className="space-y-3 p-5">
@@ -253,9 +273,11 @@ export default function CompanyDashboard() {
                   title="No upcoming events"
                   description="Create an event to meet qualified students."
                   action={
-                    <Button as={Link} to="/company/events/new" variant="secondary" size="sm" icon={CalendarPlus}>
-                      Create Event
-                    </Button>
+                    can('events:write') && (
+                      <Button as={Link} to="/company/events/new" variant="secondary" size="sm" icon={CalendarPlus}>
+                        Create Event
+                      </Button>
+                    )
                   }
                 />
               ) : (

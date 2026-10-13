@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ConflictError, UnauthorizedError
+from app.core.exceptions import BadRequestError, ConflictError, UnauthorizedError
 from app.core.security import create_access_token, hash_password, verify_password
-from app.dependencies import get_db
+from app.dependencies import get_current_user, get_db
 from app.models.account import Account
 from app.models.company import Company
-from app.schemas.auth import CompanySignupRequest, LoginRequest, TokenResponse
+from app.models.company_member import CompanyMember
+from app.schemas.auth import ChangePasswordRequest, CompanySignupRequest, LoginRequest, TokenResponse
 from app.schemas.company import CompanyOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -31,6 +32,10 @@ def signup_company(payload: CompanySignupRequest, db: Session = Depends(get_db))
         location=payload.location,
     )
     db.add(company)
+    db.flush()
+    # The signup account is the company's owner; the display name starts as
+    # the company name and can be changed in Settings.
+    db.add(CompanyMember(company_id=company.account_id, account_id=account.id, name=payload.company_name, role="owner"))
     db.commit()
 
     return CompanyOut(
@@ -51,3 +56,20 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse
 
     token = create_access_token(subject=str(account.id), role=account.role)
     return TokenResponse(access_token=token, role=account.role)
+
+
+@router.post("/change-password", status_code=204, summary="Change the signed-in account's password")
+def change_password(
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    account: Account = Depends(get_current_user),
+) -> Response:
+    if not verify_password(payload.current_password, account.password_hash):
+        # 400, not 401: the session is valid; only the confirmation failed.
+        raise BadRequestError("Current password is incorrect")
+    if verify_password(payload.new_password, account.password_hash):
+        raise BadRequestError("New password must be different from the current one")
+
+    account.password_hash = hash_password(payload.new_password)
+    db.commit()
+    return Response(status_code=204)

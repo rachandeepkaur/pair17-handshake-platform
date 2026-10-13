@@ -55,3 +55,38 @@ export function todayISO() {
   const offset = today.getTimezoneOffset() * 60_000
   return new Date(today - offset).toISOString().slice(0, 10)
 }
+
+const MINUTE = 60_000
+const HOUR = 60 * MINUTE
+const DAY = 24 * HOUR
+
+// "just now", "5m ago", "3h ago", "2d ago", then a date.
+export function formatRelative(value) {
+  if (!value) return 'Never'
+  const elapsed = Date.now() - new Date(value).getTime()
+  if (elapsed < MINUTE) return 'Just now'
+  if (elapsed < HOUR) return `${Math.floor(elapsed / MINUTE)}m ago`
+  if (elapsed < DAY) return `${Math.floor(elapsed / HOUR)}h ago`
+  if (elapsed < 7 * DAY) return `${Math.floor(elapsed / DAY)}d ago`
+  return formatDate(value)
+}
+
+// Message timestamps: time today, weekday this week, otherwise a date.
+export function formatMessageTime(value) {
+  const date = new Date(value)
+  const now = new Date()
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+  if (now - date < 6 * DAY) return date.toLocaleDateString('en-US', { weekday: 'short' })
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+export function formatDateTime(value) {
+  return new Date(value).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
