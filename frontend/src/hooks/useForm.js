@@ -27,6 +27,13 @@ export function useForm({ initialValues, validators = {}, onSubmit }) {
   const handleChange = (event) => {
     const { name, value } = event.target
     setValues((prev) => ({ ...prev, [name]: value }))
+    // Once a field shows an error, re-check it as the user types so the
+    // error clears while they fix it. Otherwise it would only clear on blur;
+    // blurring by clicking Submit removes the message, shifts the layout,
+    // and the click lands where the button used to be.
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: validateField(name, value) }))
+    }
   }
 
   const handleBlur = (event) => {

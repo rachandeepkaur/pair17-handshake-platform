@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../common/Sidebar'
 import Navbar from '../common/Navbar'
@@ -7,7 +7,13 @@ import { getDashboard } from '../../services/companyService'
 
 export default function CompanyLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { data: company, error, reload } = useFetch(getDashboard, [])
+  const { data: company, error, reload, setData } = useFetch(getDashboard, [])
+
+  // Keep the unread-messages badge current without a full reload.
+  useEffect(() => {
+    const timer = setInterval(() => getDashboard().then(setData).catch(() => {}), 30_000)
+    return () => clearInterval(timer)
+  }, [setData])
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -20,7 +26,7 @@ export default function CompanyLayout() {
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        profileCompletion={company?.profile_completion}
+        company={company}
       />
 
       <div className="lg:pl-64">

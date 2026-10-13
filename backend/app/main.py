@@ -3,7 +3,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.exceptions import register_exception_handlers
-from app.routers import applications, auth, companies, dashboards, events, jobs, students
+from app.routers import (
+    applications,
+    auth,
+    companies,
+    dashboards,
+    events,
+    jobs,
+    messages,
+    students,
+    team,
+)
 from app.services.file_service import PICTURE_DIR, ensure_upload_dirs
 
 app = FastAPI(
@@ -22,7 +32,7 @@ app.add_middleware(
 
 register_exception_handlers(app)
 
-for router in (auth, companies, jobs, applications, events, students, dashboards):
+for router in (auth, companies, jobs, applications, events, students, messages, team, dashboards):
     app.include_router(router.router)
 
 # Only profile pictures are public. Resumes are served through the

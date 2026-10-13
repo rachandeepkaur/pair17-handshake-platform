@@ -7,3 +7,10 @@ export function signupCompany(data) {
 export function login(credentials) {
   return api.post('/auth/login', credentials).then((res) => res.data)
 }
+
+export function changePassword(currentPassword, newPassword) {
+  return api.post('/auth/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+}

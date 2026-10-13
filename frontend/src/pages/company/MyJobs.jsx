@@ -10,6 +10,7 @@ import Tabs from '../../components/ui/Tabs'
 import { RowSkeleton } from '../../components/ui/Skeleton'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import { useFetch } from '../../hooks/useFetch'
+import { usePermissions } from '../../hooks/usePermissions'
 import { getMyJobs } from '../../services/jobService'
 import { JOB_CATEGORIES, jobCategoryLabel } from '../../utils/constants'
 import { formatDate, formatSalary, isOnOrAfterToday } from '../../utils/format'
@@ -18,6 +19,7 @@ const jobStatus = (job) => (isOnOrAfterToday(job.deadline) ? 'Active' : 'Closed'
 
 export default function MyJobs() {
   const { data: jobs, loading, error } = useFetch(getMyJobs, [])
+  const { can } = usePermissions()
   const [tab, setTab] = useState('all')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
@@ -45,9 +47,11 @@ export default function MyJobs() {
         title="Jobs"
         description="Manage your postings and see who applied."
         actions={
-          <Button as={Link} to="/company/jobs/new" icon={Plus}>
-            Post a Job
-          </Button>
+          can('jobs:write') && (
+            <Button as={Link} to="/company/jobs/new" icon={Plus}>
+              Post a Job
+            </Button>
+          )
         }
       />
 
@@ -99,9 +103,11 @@ export default function MyJobs() {
               title="Your first job post is one step away."
               description="Post a role to start receiving applicants."
               action={
-                <Button as={Link} to="/company/jobs/new" icon={Plus}>
-                  Post a Job
-                </Button>
+                can('jobs:write') && (
+                  <Button as={Link} to="/company/jobs/new" icon={Plus}>
+                    Post a Job
+                  </Button>
+                )
               }
             />
           </div>

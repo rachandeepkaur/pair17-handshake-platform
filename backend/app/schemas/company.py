@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.common import clean_optional_text, clean_required_text
+from app.schemas.team import MembershipOut
 
 
 class CompanyOut(BaseModel):
@@ -57,3 +58,5 @@ class CompanyDashboardOut(BaseModel):
     total_registrations: int
     applications_by_status: dict[str, int]
     recent_applications: list[RecentApplicationOut]
+    unread_messages: int
+    member: MembershipOut

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import CompanySignup from '../pages/auth/CompanySignup'
 import Login from '../pages/auth/Login'
+import AcceptInvite from '../pages/auth/AcceptInvite'
 import CompanyLayout from '../components/layout/CompanyLayout'
 import CompanyDashboard from '../pages/company/Dashboard'
 import MyJobs from '../pages/company/MyJobs'
@@ -26,6 +27,7 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup/company" element={<CompanySignup />} />
+      <Route path="/invite/:token" element={<AcceptInvite />} />
 
       <Route
         path="/company"

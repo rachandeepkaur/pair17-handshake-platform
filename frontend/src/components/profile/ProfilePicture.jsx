@@ -7,7 +7,7 @@ import { apiUrl, errorMessage } from '../../services/api'
 const MAX_BYTES = 2 * 1024 * 1024
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp']
 
-export default function ProfilePicture({ name, pictureUrl, onUpload }) {
+export default function ProfilePicture({ name, pictureUrl, onUpload, canEdit = true }) {
   const inputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
@@ -38,6 +38,7 @@ export default function ProfilePicture({ name, pictureUrl, onUpload }) {
       ) : (
         <Avatar name={name} size="lg" className="!h-20 !w-20 !rounded-2xl !text-xl" />
       )}
+      {canEdit && (
       <div>
         <input ref={inputRef} type="file" accept={ACCEPTED.join(',')} className="hidden" onChange={handleFile} />
         <Button
@@ -53,6 +54,7 @@ export default function ProfilePicture({ name, pictureUrl, onUpload }) {
         <p className="mt-1 text-xs text-gray-500">JPEG, PNG, or WebP · up to 2 MB</p>
         {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       </div>
+      )}
     </div>
   )
 }

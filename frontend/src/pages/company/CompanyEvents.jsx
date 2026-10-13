@@ -10,6 +10,7 @@ import Skeleton from '../../components/ui/Skeleton'
 import Tabs from '../../components/ui/Tabs'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import { useFetch } from '../../hooks/useFetch'
+import { usePermissions } from '../../hooks/usePermissions'
 import { getMyEvents } from '../../services/eventService'
 import { formatDate, formatTime, isOnOrAfterToday } from '../../utils/format'
 
@@ -48,6 +49,7 @@ function EventCard({ event }) {
 
 export default function CompanyEvents() {
   const { data, loading, error } = useFetch(getMyEvents, [])
+  const { can } = usePermissions()
   const [tab, setTab] = useState('upcoming')
 
   const events = data || []
@@ -62,9 +64,11 @@ export default function CompanyEvents() {
         title="Events"
         description="Host events and see which students registered."
         actions={
-          <Button as={Link} to="/company/events/new" variant="secondary" icon={CalendarPlus}>
-            Create Event
-          </Button>
+          can('events:write') && (
+            <Button as={Link} to="/company/events/new" variant="secondary" icon={CalendarPlus}>
+              Create Event
+            </Button>
+          )
         }
       />
 
@@ -92,7 +96,7 @@ export default function CompanyEvents() {
           title={tab === 'upcoming' ? 'No upcoming events' : 'No past events'}
           description={tab === 'upcoming' ? 'Create an event to meet qualified students.' : 'Events appear here after their date passes.'}
           action={
-            tab === 'upcoming' && (
+            tab === 'upcoming' && can('events:write') && (
               <Button as={Link} to="/company/events/new" variant="secondary" icon={CalendarPlus}>
                 Create Event
               </Button>

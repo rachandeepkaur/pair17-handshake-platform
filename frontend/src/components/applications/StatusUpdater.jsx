@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { ConfirmDialog } from '../common/Modal'
+import StatusBadge from '../ui/StatusBadge'
+import { usePermissions } from '../../hooks/usePermissions'
 import { updateApplicationStatus } from '../../services/applicationService'
 import { errorMessage } from '../../services/api'
 import { APPLICATION_STATUSES } from '../../utils/constants'
@@ -8,6 +10,7 @@ export default function StatusUpdater({ application, onUpdated, compact = false 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [pendingDecline, setPendingDecline] = useState(false)
+  const { can, loaded } = usePermissions()
 
   const save = async (status) => {
     setSaving(true)
@@ -29,6 +32,9 @@ export default function StatusUpdater({ application, onUpdated, compact = false 
     if (status === 'Declined') setPendingDecline(true)
     else save(status)
   }
+
+  // Read-only roles see the status but can't change it.
+  if (!loaded || !can('applicants:write')) return <StatusBadge status={application.status} />
 
   const id = `status-${application.id}`
   return (

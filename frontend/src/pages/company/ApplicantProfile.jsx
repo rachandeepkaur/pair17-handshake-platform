@@ -1,5 +1,8 @@
 import { Link, useParams } from 'react-router-dom'
-import { Briefcase } from 'lucide-react'
+import { Briefcase, MessageSquare } from 'lucide-react'
+import Button from '../../components/ui/Button'
+import { usePermissions } from '../../hooks/usePermissions'
+import { useMessageStudent } from '../../hooks/useMessageStudent'
 import Card, { CardHeader } from '../../components/ui/Card'
 import PageHeader from '../../components/ui/PageHeader'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -15,6 +18,8 @@ import { formatDate } from '../../utils/format'
 export default function ApplicantProfile() {
   const { applicationId } = useParams()
   const { data, loading, error, setData } = useFetch(() => getApplication(applicationId), [applicationId])
+  const { can } = usePermissions()
+  const { messageStudent, busy, error: messageError } = useMessageStudent()
 
   const handleUpdated = (updated) =>
     setData((current) => ({ ...current, status: updated.status, updated_at: updated.updated_at }))
@@ -35,8 +40,20 @@ export default function ApplicantProfile() {
         description={data && `Applied ${formatDate(data.applied_at)}`}
         backTo={data ? `/company/jobs/${data.job_id}` : '/company/applicants'}
         backLabel="Back to job"
-        actions={data && <StatusBadge status={data.status} />}
+        actions={
+          data && (
+            <>
+              <StatusBadge status={data.status} />
+              {can('messages:write') && (
+                <Button variant="outline" size="sm" icon={MessageSquare} onClick={() => messageStudent(data.student.account_id)} disabled={busy}>
+                  {busy ? 'Opening…' : 'Message'}
+                </Button>
+              )}
+            </>
+          )
+        }
       />
+      <ErrorMessage message={messageError} />
 
       {loading || !data ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">

@@ -4,6 +4,8 @@ import Button from '../../components/ui/Button'
 import PageHeader from '../../components/ui/PageHeader'
 import FormField, { SelectField, TextAreaField } from '../../components/common/FormField'
 import { useForm } from '../../hooks/useForm'
+import { usePermissions } from '../../hooks/usePermissions'
+import NoAccess from '../../components/common/NoAccess'
 import { createJob } from '../../services/jobService'
 import { JOB_CATEGORIES } from '../../utils/constants'
 import { todayISO } from '../../utils/format'
@@ -23,6 +25,7 @@ const nonNegative = (value) => (value !== '' && Number(value) < 0 ? 'Salary cann
 export default function PostJob() {
   const navigate = useNavigate()
   const { reloadCompany } = useOutletContext()
+  const { can, loaded, member } = usePermissions()
 
   const { values, errors, isSubmitting, submitError, handleChange, handleBlur, handleSubmit } = useForm({
     initialValues: {
@@ -58,6 +61,15 @@ export default function PostJob() {
   })
 
   const setCheckbox = (name) => (event) => handleChange({ target: { name, value: event.target.checked } })
+
+  if (loaded && !can('jobs:write')) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-5">
+        <PageHeader title="Post a job" backTo="/company/jobs" backLabel="Back to jobs" />
+        <NoAccess roleLabel={member.role_label} action="post jobs" />
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">

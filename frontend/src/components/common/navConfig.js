@@ -17,14 +17,9 @@ export const companyNav = [
   { to: '/company/applicants', label: 'Applicants', icon: Users },
   { to: '/company/events', label: 'Events', icon: CalendarDays },
   { to: '/company/students', label: 'Students', icon: GraduationCap },
+  { to: '/company/messages', label: 'Messages', icon: MessageSquare, badgeKey: 'unread_messages' },
   { to: '/company/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/company/profile', label: 'Company Profile', icon: Building2 },
-]
-
-// Planned sections without a backend yet; shown separately and labeled so
-// they never look like broken features.
-export const comingSoonNav = [
-  { to: '/company/messages', label: 'Messages', icon: MessageSquare },
   { to: '/company/team', label: 'Team & Permissions', icon: Shield },
   { to: '/company/settings', label: 'Settings', icon: Settings },
 ]

@@ -1,9 +1,9 @@
 import api from './api'
 
-export function getCompanyApplications({ jobId, status } = {}) {
+export function getCompanyApplications({ jobId, studentId, status } = {}) {
   return api
     .get('/applications/company', {
-      params: { job_id: jobId || undefined, status: status || undefined },
+      params: { job_id: jobId || undefined, student_id: studentId || undefined, status: status || undefined },
     })
     .then((res) => res.data)
 }

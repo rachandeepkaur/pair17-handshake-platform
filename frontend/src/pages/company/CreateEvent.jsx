@@ -4,6 +4,8 @@ import Button from '../../components/ui/Button'
 import PageHeader from '../../components/ui/PageHeader'
 import FormField, { TextAreaField } from '../../components/common/FormField'
 import { useForm } from '../../hooks/useForm'
+import { usePermissions } from '../../hooks/usePermissions'
+import NoAccess from '../../components/common/NoAccess'
 import { createEvent } from '../../services/eventService'
 import { todayISO } from '../../utils/format'
 import { composeValidators, maxLength, minLength, required } from '../../utils/validators'
@@ -11,6 +13,7 @@ import { composeValidators, maxLength, minLength, required } from '../../utils/v
 export default function CreateEvent() {
   const navigate = useNavigate()
   const { reloadCompany } = useOutletContext()
+  const { can, loaded, member } = usePermissions()
   const today = todayISO()
 
   const { values, errors, isSubmitting, submitError, handleChange, handleBlur, handleSubmit } = useForm({
@@ -29,6 +32,15 @@ export default function CreateEvent() {
       navigate(`/company/events/${event.id}`)
     },
   })
+
+  if (loaded && !can('events:write')) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-5">
+        <PageHeader title="Create an event" backTo="/company/events" backLabel="Back to events" />
+        <NoAccess roleLabel={member.role_label} action="create events" />
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">

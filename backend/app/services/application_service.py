@@ -39,6 +39,7 @@ def list_company_applications(
     company_id: int,
     *,
     job_id: int | None = None,
+    student_id: int | None = None,
     status: str | None = None,
 ) -> list[ApplicationOut]:
     if job_id is not None:
@@ -47,6 +48,8 @@ def list_company_applications(
     query = _company_applications(company_id)
     if job_id is not None:
         query = query.where(Application.job_id == job_id)
+    if student_id is not None:
+        query = query.where(Application.student_id == student_id)
     if status:
         query = query.where(Application.status == status)
 
