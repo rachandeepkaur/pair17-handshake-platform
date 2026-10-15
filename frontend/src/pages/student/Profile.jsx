@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { Mail, MapPin, Pencil, School } from 'lucide-react'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import ProfilePicture from '../../components/profile/ProfilePicture'
@@ -19,16 +20,21 @@ const detail = (label, value) => (
 
 export default function StudentProfile() {
   const { data: profile, loading, error, setData } = useFetch(getMyProfile, [])
+  const { reloadStudent } = useOutletContext()
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
 
   const applyUpdate = (updated) => setData(updated)
   const handleSave = async (values) => {
     applyUpdate(await updateMyProfile(values))
+    reloadStudent()
     setEditing(false)
     setSaved(true)
   }
-  const handleUpload = async (file) => applyUpdate(await uploadMyPicture(file))
+  const handleUpload = async (file) => {
+    applyUpdate(await uploadMyPicture(file))
+    reloadStudent()
+  }
 
   if (error) return <ErrorMessage message={error} />
   if (loading || !profile) return <Skeleton className="h-96 rounded-2xl" />

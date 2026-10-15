@@ -21,6 +21,7 @@ import CompanyProfile from '../pages/company/CompanyProfile'
 import Messages from '../pages/company/Messages'
 import Team from '../pages/company/Team'
 import Settings from '../pages/company/Settings'
+import StudentLayout from '../components/layout/StudentLayout'
 import StudentDashboard from '../pages/student/Dashboard'
 import StudentProfile from '../pages/student/Profile'
 import StudentJobs from '../pages/student/Jobs'
@@ -38,25 +39,14 @@ export default function AppRoutes() {
       <Route path="/signup/student" element={<StudentSignup />} />
       <Route path="/invite/:token" element={<AcceptInvite />} />
 
-      <Route
-        path="/student/dashboard"
-        element={
-          <ProtectedRoute role="student">
-            <StudentDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/student/profile"
-        element={
-          <ProtectedRoute role="student">
-            <StudentProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/student/jobs" element={<ProtectedRoute role="student"><StudentJobs /></ProtectedRoute>} />
-      <Route path="/student/jobs/:jobId" element={<ProtectedRoute role="student"><StudentJobDetail /></ProtectedRoute>} />
-      <Route path="/student/applications" element={<ProtectedRoute role="student"><MyApplications /></ProtectedRoute>} />
+      <Route path="/student" element={<ProtectedRoute role="student"><StudentLayout /></ProtectedRoute>}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<StudentDashboard />} />
+        <Route path="profile" element={<StudentProfile />} />
+        <Route path="jobs" element={<StudentJobs />} />
+        <Route path="jobs/:jobId" element={<StudentJobDetail />} />
+        <Route path="applications" element={<MyApplications />} />
+      </Route>
 
       <Route
         path="/company"

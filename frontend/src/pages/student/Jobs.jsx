@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Briefcase, Search } from 'lucide-react'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import StudentJobCard from '../../components/jobs/StudentJobCard'
@@ -10,9 +11,16 @@ import { getStudentJobs } from '../../services/studentJobService'
 import { JOB_CATEGORIES } from '../../utils/constants'
 
 export default function StudentJobs() {
-  const [draft, setDraft] = useState({ q: '', category: '', city: '' })
-  const [filters, setFilters] = useState({ q: '', category: '', city: '' })
+  const [searchParams] = useSearchParams()
+  const urlQuery = searchParams.get('q') || ''
+  const [draft, setDraft] = useState({ q: urlQuery, category: '', city: '' })
+  const [filters, setFilters] = useState({ q: urlQuery, category: '', city: '' })
   const { data, loading, error } = useFetch(() => getStudentJobs(filters), [filters])
+
+  useEffect(() => {
+    setDraft((current) => ({ ...current, q: urlQuery }))
+    setFilters((current) => ({ ...current, q: urlQuery }))
+  }, [urlQuery])
 
   const change = (event) => setDraft((current) => ({ ...current, [event.target.name]: event.target.value }))
   const submit = (event) => {
