@@ -15,13 +15,14 @@ import CompanyEvents from '../pages/company/CompanyEvents'
 import CreateEvent from '../pages/company/CreateEvent'
 import EventRegistrations from '../pages/company/EventRegistrations'
 import StudentSearch from '../pages/company/StudentSearch'
-import StudentProfile from '../pages/company/StudentProfile'
+import CompanyStudentProfile from '../pages/company/StudentProfile'
 import Analytics from '../pages/company/Analytics'
 import CompanyProfile from '../pages/company/CompanyProfile'
 import Messages from '../pages/company/Messages'
 import Team from '../pages/company/Team'
 import Settings from '../pages/company/Settings'
 import StudentDashboard from '../pages/student/Dashboard'
+import StudentProfile from '../pages/student/Profile'
 import NotFound from '../pages/NotFound'
 import ProtectedRoute from './ProtectedRoute'
 
@@ -39,6 +40,14 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute role="student">
             <StudentDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/profile"
+        element={
+          <ProtectedRoute role="student">
+            <StudentProfile />
           </ProtectedRoute>
         }
       />
@@ -62,7 +71,7 @@ export default function AppRoutes() {
         <Route path="events/new" element={<CreateEvent />} />
         <Route path="events/:eventId" element={<EventRegistrations />} />
         <Route path="students" element={<StudentSearch />} />
-        <Route path="students/:studentId" element={<StudentProfile />} />
+        <Route path="students/:studentId" element={<CompanyStudentProfile />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="profile" element={<CompanyProfile />} />
         <Route path="messages" element={<Messages />} />
