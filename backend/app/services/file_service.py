@@ -10,6 +10,7 @@ RESUME_DIR = UPLOAD_ROOT / "resumes"
 PICTURE_DIR = UPLOAD_ROOT / "profile_pictures"
 
 MAX_PICTURE_BYTES = 2 * 1024 * 1024
+MAX_RESUME_BYTES = 5 * 1024 * 1024
 
 # Checked against the file's leading bytes, not the client-supplied
 # content type, so a renamed non-image file is rejected.
@@ -50,6 +51,23 @@ async def save_profile_picture(upload: UploadFile) -> str:
     filename = f"{uuid.uuid4().hex}{extension}"
     (PICTURE_DIR / filename).write_bytes(data)
     return f"profile_pictures/{filename}"
+
+
+async def save_resume(upload: UploadFile) -> str:
+    """Validate and store a PDF resume; return its path relative to UPLOAD_ROOT."""
+
+    data = await upload.read(MAX_RESUME_BYTES + 1)
+    if not data:
+        raise BadRequestError("The uploaded file is empty")
+    if len(data) > MAX_RESUME_BYTES:
+        raise BadRequestError("Resume must be 5 MB or smaller")
+    if not data.startswith(b"%PDF-"):
+        raise BadRequestError("Resume must be a PDF file")
+
+    ensure_upload_dirs()
+    filename = f"{uuid.uuid4().hex}.pdf"
+    (RESUME_DIR / filename).write_bytes(data)
+    return f"resumes/{filename}"
 
 
 def delete_upload(relative_path: str | None) -> None:

@@ -2,7 +2,7 @@
 
 ## Status and purpose
 
-**Status: student sign-up, profile, and job-discovery routes are implemented; the remaining routes are planned.**
+**Status: student sign-up, profile, job discovery, and applications are implemented; the remaining routes are planned.**
 
 This document defines the integration boundary for the Lab 1 Part A student
 portal. It intentionally leaves the existing company routes and their source
@@ -45,8 +45,8 @@ The existing shared models are `Student`, `Company`, `Job`, `Event`,
 | `POST /students/me/picture` | **Implemented.** Upload or replace the signed-in student's profile picture | `students` and profile-picture storage |
 | `GET /student/jobs` | **Implemented.** Search visible jobs by title/company and filter by category and city | `jobs`, `companies` |
 | `GET /student/jobs/{job_id}` | **Implemented.** Return one visible job with the required company/contact details | `jobs`, `companies` |
-| `POST /student/jobs/{job_id}/apply` | Upload a PDF resume and create one application for the current student | `applications`, `jobs`, resume storage |
-| `GET /student/applications` | List the current student's applications; support status filtering | `applications`, `jobs`, `companies` |
+| `POST /student/jobs/{job_id}/apply` | **Implemented.** Upload a PDF resume and create one application for the current student | `applications`, `jobs`, resume storage |
+| `GET /student/applications` | **Implemented.** List the current student's applications; support status filtering | `applications`, `jobs`, `companies` |
 | `GET /student/events` | List upcoming events in increasing date order; support event-name search | `events`, `companies` |
 | `GET /student/events/{event_id}` | Return one visible event | `events`, `companies` |
 | `POST /student/events/{event_id}/register` | Create one registration for the current student when eligible | `registrations`, `events`, `students` |

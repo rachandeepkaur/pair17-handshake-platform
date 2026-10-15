@@ -25,6 +25,7 @@ import StudentDashboard from '../pages/student/Dashboard'
 import StudentProfile from '../pages/student/Profile'
 import StudentJobs from '../pages/student/Jobs'
 import StudentJobDetail from '../pages/student/JobDetail'
+import MyApplications from '../pages/student/MyApplications'
 import NotFound from '../pages/NotFound'
 import ProtectedRoute from './ProtectedRoute'
 
@@ -55,6 +56,7 @@ export default function AppRoutes() {
       />
       <Route path="/student/jobs" element={<ProtectedRoute role="student"><StudentJobs /></ProtectedRoute>} />
       <Route path="/student/jobs/:jobId" element={<ProtectedRoute role="student"><StudentJobDetail /></ProtectedRoute>} />
+      <Route path="/student/applications" element={<ProtectedRoute role="student"><MyApplications /></ProtectedRoute>} />
 
       <Route
         path="/company"
