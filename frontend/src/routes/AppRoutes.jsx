@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import CompanySignup from '../pages/auth/CompanySignup'
 import Login from '../pages/auth/Login'
+import StudentLogin from '../pages/auth/StudentLogin'
+import StudentSignup from '../pages/auth/StudentSignup'
 import AcceptInvite from '../pages/auth/AcceptInvite'
 import CompanyLayout from '../components/layout/CompanyLayout'
 import CompanyDashboard from '../pages/company/Dashboard'
@@ -19,6 +21,7 @@ import CompanyProfile from '../pages/company/CompanyProfile'
 import Messages from '../pages/company/Messages'
 import Team from '../pages/company/Team'
 import Settings from '../pages/company/Settings'
+import StudentDashboard from '../pages/student/Dashboard'
 import NotFound from '../pages/NotFound'
 import ProtectedRoute from './ProtectedRoute'
 
@@ -27,7 +30,18 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup/company" element={<CompanySignup />} />
+      <Route path="/student/login" element={<StudentLogin />} />
+      <Route path="/signup/student" element={<StudentSignup />} />
       <Route path="/invite/:token" element={<AcceptInvite />} />
+
+      <Route
+        path="/student/dashboard"
+        element={
+          <ProtectedRoute role="student">
+            <StudentDashboard />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/company"

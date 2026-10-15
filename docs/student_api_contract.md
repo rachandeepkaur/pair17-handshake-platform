@@ -2,7 +2,7 @@
 
 ## Status and purpose
 
-**Status: planned contract; routes below are not implemented yet.**
+**Status: student sign-up is implemented; the remaining routes are planned.**
 
 This document defines the integration boundary for the Lab 1 Part A student
 portal. It intentionally leaves the existing company routes and their source
@@ -39,7 +39,7 @@ The existing shared models are `Student`, `Company`, `Job`, `Event`,
 
 | Method and path | Purpose | Shared data touched |
 |---|---|---|
-| `POST /auth/signup/student` | Create a student account and initial student profile from name, email, password, and college name | `accounts`, `students` |
+| `POST /auth/signup/student` | **Implemented.** Create a student account and initial student profile from name, email, password, and college name | `accounts`, `students` |
 | `GET /students/me` | Return the signed-in student's profile | `students`, `accounts` |
 | `PUT /students/me` | Update the signed-in student's allowed profile fields | `students`, `accounts` where email is updated |
 | `POST /students/me/picture` | Upload or replace the signed-in student's profile picture | `students` and profile-picture storage |
