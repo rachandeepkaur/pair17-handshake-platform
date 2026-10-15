@@ -23,6 +23,8 @@ import Team from '../pages/company/Team'
 import Settings from '../pages/company/Settings'
 import StudentDashboard from '../pages/student/Dashboard'
 import StudentProfile from '../pages/student/Profile'
+import StudentJobs from '../pages/student/Jobs'
+import StudentJobDetail from '../pages/student/JobDetail'
 import NotFound from '../pages/NotFound'
 import ProtectedRoute from './ProtectedRoute'
 
@@ -51,6 +53,8 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/student/jobs" element={<ProtectedRoute role="student"><StudentJobs /></ProtectedRoute>} />
+      <Route path="/student/jobs/:jobId" element={<ProtectedRoute role="student"><StudentJobDetail /></ProtectedRoute>} />
 
       <Route
         path="/company"

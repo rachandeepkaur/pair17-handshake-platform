@@ -18,6 +18,7 @@ export default function StudentDashboard() {
       <Link to="/student/profile" className="mt-5 inline-flex rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
         Complete profile
       </Link>
+      <Link to="/student/jobs" className="mt-3 block text-sm font-semibold text-brand-700 hover:text-brand-800">Browse jobs</Link>
       <button type="button" onClick={handleLogout} className="mt-6 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
         Sign out
       </button>
