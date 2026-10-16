@@ -27,6 +27,9 @@ import StudentProfile from '../pages/student/Profile'
 import StudentJobs from '../pages/student/Jobs'
 import StudentJobDetail from '../pages/student/JobDetail'
 import MyApplications from '../pages/student/MyApplications'
+import StudentEvents from '../pages/student/Events'
+import StudentEventDetail from '../pages/student/EventDetail'
+import RegisteredEvents from '../pages/student/RegisteredEvents'
 import NotFound from '../pages/NotFound'
 import ProtectedRoute from './ProtectedRoute'
 
@@ -46,6 +49,9 @@ export default function AppRoutes() {
         <Route path="jobs" element={<StudentJobs />} />
         <Route path="jobs/:jobId" element={<StudentJobDetail />} />
         <Route path="applications" element={<MyApplications />} />
+        <Route path="events" element={<StudentEvents />} />
+        <Route path="events/registrations" element={<RegisteredEvents />} />
+        <Route path="events/:eventId" element={<StudentEventDetail />} />
       </Route>
 
       <Route

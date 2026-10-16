@@ -2,7 +2,7 @@
 
 ## Status and purpose
 
-**Status: student sign-up, profile, job discovery, and applications are implemented; the remaining routes are planned.**
+**Status: student sign-up, profile, job discovery, applications, and events are implemented; the remaining routes are planned.**
 
 This document defines the integration boundary for the Lab 1 Part A student
 portal. It intentionally leaves the existing company routes and their source
@@ -47,10 +47,10 @@ The existing shared models are `Student`, `Company`, `Job`, `Event`,
 | `GET /student/jobs/{job_id}` | **Implemented.** Return one visible job with the required company/contact details | `jobs`, `companies` |
 | `POST /student/jobs/{job_id}/apply` | **Implemented.** Upload a PDF resume and create one application for the current student | `applications`, `jobs`, resume storage |
 | `GET /student/applications` | **Implemented.** List the current student's applications; support status filtering | `applications`, `jobs`, `companies` |
-| `GET /student/events` | List upcoming events in increasing date order; support event-name search | `events`, `companies` |
-| `GET /student/events/{event_id}` | Return one visible event | `events`, `companies` |
-| `POST /student/events/{event_id}/register` | Create one registration for the current student when eligible | `registrations`, `events`, `students` |
-| `GET /student/registrations` | List the current student's registered events | `registrations`, `events`, `companies` |
+| `GET /student/events` | **Implemented.** List upcoming events in increasing date order | `events`, `companies` |
+| `GET /student/events/{event_id}` | **Implemented.** Return one upcoming event and the student's registration state | `events`, `companies`, `registrations` |
+| `POST /student/events/{event_id}/register` | **Implemented.** Create one registration for the current student | `registrations`, `events`, `students` |
+| `GET /student/events/registrations` | **Implemented.** List the current student's registered events | `registrations`, `events`, `companies` |
 | `GET /student/directory` | Browse/search enrolled students by name or college and filter by major | `students` |
 | `GET /student/directory/{student_id}` | Return a student profile suitable for directory viewing | `students` |
 
@@ -64,7 +64,7 @@ modified by student code:
 | `GET /jobs/{job_id}` | `GET /student/jobs/{job_id}` |
 | `GET /events/{event_id}` | `GET /student/events/{event_id}` |
 | `GET /jobs/mine` | `GET /student/applications` for a student's application history |
-| `GET /events/mine` | `GET /student/registrations` for a student's event history |
+| `GET /events/mine` | `GET /student/events/registrations` for a student's event history |
 
 ## Required rules for later implementation
 
@@ -75,9 +75,9 @@ modified by student code:
 - An application may be created only for an existing visible job before its
   deadline, with a PDF resume, and without a prior application by the same
   student for that job.
-- Event registration may be created only for an existing upcoming event when
-  the student satisfies the event's eligibility rule and has not already
-  registered.
+- Event registration may be created only for an existing upcoming event and
+  only once per student. Eligibility is currently display text supplied by the
+  company, rather than structured criteria that the application can enforce.
 - Resumes remain private. A student may access only their own uploaded resume;
   company-side resume preview remains governed by the existing company
   ownership checks.

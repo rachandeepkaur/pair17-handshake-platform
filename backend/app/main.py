@@ -13,6 +13,7 @@ from app.routers import (
     messages,
     student_auth,
     student_applications,
+    student_events,
     student_jobs,
     student_profile,
     students,
@@ -36,7 +37,7 @@ app.add_middleware(
 
 register_exception_handlers(app)
 
-for router in (auth, student_auth, student_profile, student_jobs, student_applications, companies, jobs, applications, events, students, messages, team, dashboards):
+for router in (auth, student_auth, student_profile, student_jobs, student_applications, student_events, companies, jobs, applications, events, students, messages, team, dashboards):
     app.include_router(router.router)
 
 # Only profile pictures are public. Resumes are served through the
