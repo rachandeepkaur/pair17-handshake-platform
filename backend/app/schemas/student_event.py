@@ -14,6 +14,7 @@ class StudentEventOut(BaseModel):
     company_name: str
     company_location: str
     registered: bool
+    eligible: bool
 
 
 class StudentRegistrationOut(BaseModel):
