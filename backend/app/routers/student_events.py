@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db, require_student
@@ -12,9 +12,11 @@ router = APIRouter(prefix="/student/events", tags=["student events"])
 
 @router.get("", response_model=list[StudentEventOut])
 def list_student_events(
-    db: Session = Depends(get_db), account: Account = Depends(require_student)
+    q: str | None = Query(default=None, max_length=190, description="Matches event name"),
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_student),
 ) -> list[StudentEventOut]:
-    return student_event_service.list_events(db, account.id)
+    return student_event_service.list_events(db, account.id, q=q)
 
 
 @router.get("/registrations", response_model=list[StudentRegistrationOut])

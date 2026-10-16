@@ -1,7 +1,9 @@
 import api from './api'
 
-export function getStudentEvents() {
-  return api.get('/student/events').then((response) => response.data)
+export function getStudentEvents({ q } = {}) {
+  return api.get('/student/events', {
+    params: { q: q || undefined },
+  }).then((response) => response.data)
 }
 
 export function getStudentEvent(eventId) {

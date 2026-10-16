@@ -47,7 +47,7 @@ The existing shared models are `Student`, `Company`, `Job`, `Event`,
 | `GET /student/jobs/{job_id}` | **Implemented.** Return one visible job with the required company/contact details | `jobs`, `companies` |
 | `POST /student/jobs/{job_id}/apply` | **Implemented.** Upload a PDF resume and create one application for the current student | `applications`, `jobs`, resume storage |
 | `GET /student/applications` | **Implemented.** List the current student's applications; support status filtering | `applications`, `jobs`, `companies` |
-| `GET /student/events` | **Implemented.** List upcoming events in increasing date order | `events`, `companies` |
+| `GET /student/events?q=` | **Implemented.** List upcoming events in increasing date order; optionally filter by event name | `events`, `companies` |
 | `GET /student/events/{event_id}` | **Implemented.** Return one upcoming event and the student's registration state | `events`, `companies`, `registrations` |
 | `POST /student/events/{event_id}/register` | **Implemented.** Create one registration for the current student | `registrations`, `events`, `students` |
 | `GET /student/events/registrations` | **Implemented.** List the current student's registered events | `registrations`, `events`, `companies` |

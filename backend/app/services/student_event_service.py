@@ -10,6 +10,12 @@ from app.models.registration import Registration
 from app.schemas.student_event import StudentEventOut, StudentRegistrationOut
 
 
+def _like_pattern(value: str) -> str:
+    # Treat user-provided wildcard characters as literal search text.
+    escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
 def _event_out(event: Event, company: Company, registration_id: int | None) -> StudentEventOut:
     return StudentEventOut(
         id=event.id,
@@ -36,12 +42,11 @@ def _event_query(student_id: int):
     )
 
 
-def list_events(db: Session, student_id: int) -> list[StudentEventOut]:
-    rows = db.execute(
-        _event_query(student_id)
-        .where(Event.event_date >= date.today())
-        .order_by(Event.event_date, Event.event_time, Event.id)
-    ).all()
+def list_events(db: Session, student_id: int, *, q: str | None = None) -> list[StudentEventOut]:
+    query = _event_query(student_id).where(Event.event_date >= date.today())
+    if q:
+        query = query.where(Event.name.ilike(_like_pattern(q)))
+    rows = db.execute(query.order_by(Event.event_date, Event.event_time, Event.id)).all()
     return [_event_out(event, company, registration_id) for event, company, registration_id in rows]
 
 
