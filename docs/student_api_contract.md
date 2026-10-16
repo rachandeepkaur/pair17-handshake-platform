@@ -51,8 +51,7 @@ The existing shared models are `Student`, `Company`, `Job`, `Event`,
 | `GET /student/events/{event_id}` | **Implemented.** Return one upcoming event and the student's registration state | `events`, `companies`, `registrations` |
 | `POST /student/events/{event_id}/register` | **Implemented.** Create one registration for the current student | `registrations`, `events`, `students` |
 | `GET /student/events/registrations` | **Implemented.** List the current student's registered events | `registrations`, `events`, `companies` |
-| `GET /student/directory` | Browse/search enrolled students by name or college and filter by major | `students` |
-| `GET /student/directory/{student_id}` | Return a student profile suitable for directory viewing | `students` |
+| `GET /students` | **Implemented.** Shared read-only directory search for signed-in users by name or college; filter by major | `students` |
 
 ## Route separation
 
