@@ -96,3 +96,23 @@ def test_company_placeholder_does_not_call_the_model(capsys) -> None:
     assert run.answer == "Company assistant tools are not available yet."
     assert client.calls == []
     assert "Assistant tool calls: 0" in capsys.readouterr().out
+
+
+def test_agent_repairs_a_promised_search_without_a_tool_call() -> None:
+    client = FakeClient(
+        [
+            AssistantMessage(content="I couldn't find one there. Let me try searching another city."),
+            AssistantMessage(tool_calls=(ToolCall(name="search_jobs", arguments={"query": "internship"}),)),
+            AssistantMessage(content="There are no matching internships in the other city either."),
+        ]
+    )
+    registry = ToolRegistry(
+        role="student",
+        tools=(ToolDefinition(name="search_jobs", description="Search jobs.", parameters={}, handler=search_tool),),
+    )
+
+    run = run_assistant("Find an internship", [], AssistantContext(account_id=1, role="student"), client, registry=registry)
+
+    assert run.answer == "There are no matching internships in the other city either."
+    assert run.tool_call_count == 1
+    assert any(message.get("content", "").startswith("Do not promise") for message in client.calls[1])

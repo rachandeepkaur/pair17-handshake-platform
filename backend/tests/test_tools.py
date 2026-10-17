@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from app.assistant.prompts import system_prompt_for_role
 from app.assistant.registry import tool_registry_for_role
 from app.assistant.tools.get_job_details import get_job_details
+from app.assistant.tools.get_platform_options import get_platform_options
 from app.assistant.tools.get_student_preferences import get_student_preferences
 from app.assistant.tools.search_events import search_events
 from app.assistant.tools.search_jobs import search_jobs
@@ -22,6 +23,7 @@ def test_student_registry_has_all_read_only_part_b_tools() -> None:
 
     assert [tool["function"]["name"] for tool in registry.schemas] == [
         "get_student_preferences",
+        "get_platform_options",
         "search_jobs",
         "get_job_details",
         "search_events",
@@ -35,6 +37,16 @@ def test_student_prompt_requires_preferences_before_city_recommendations() -> No
     assert "first call get_student_preferences, then call search_jobs" in prompt
     assert "MUST call a tool" in prompt
     assert "For jobs or internships, call search_jobs." in prompt
+    assert "get_platform_options" in prompt
+
+
+def test_platform_options_returns_configured_search_vocabulary(monkeypatch) -> None:
+    monkeypatch.setattr("app.assistant.tools.get_platform_options.settings.city_set", "Palo Alto, Menlo Park")
+
+    result = get_platform_options(_context(), {})
+
+    assert "Available cities: Palo Alto, Menlo Park" in result
+    assert "internship" in result
 
 
 def test_get_student_preferences_reports_missing_preferences(monkeypatch) -> None:

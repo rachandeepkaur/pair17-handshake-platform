@@ -59,6 +59,7 @@ class ToolDefinition:
     description: str
     parameters: dict[str, Any]
     handler: ToolHandler
+    requires_confirmation: bool = False
 
     def as_ollama_tool(self) -> Message:
         return {
