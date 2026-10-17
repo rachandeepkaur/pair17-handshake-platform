@@ -35,17 +35,13 @@ class AssistantMessage:
     def as_ollama_message(self) -> Message:
         message: Message = {"role": "assistant", "content": self.content}
         if self.tool_calls:
-            message["tool_calls"] = [
-                {
-                    "type": "function",
-                    "function": {
-                        "index": call.index,
-                        "name": call.name,
-                        "arguments": call.arguments,
-                    },
-                }
-                for call in self.tool_calls
-            ]
+            tool_calls = []
+            for call in self.tool_calls:
+                function: Message = {"name": call.name, "arguments": call.arguments}
+                if call.index is not None:
+                    function["index"] = call.index
+                tool_calls.append({"type": "function", "function": function})
+            message["tool_calls"] = tool_calls
         return message
 
 
