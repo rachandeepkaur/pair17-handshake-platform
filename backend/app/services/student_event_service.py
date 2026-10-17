@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
@@ -70,16 +70,45 @@ def _event_query(student_id: int):
     )
 
 
-def list_events(db: Session, student_id: int, *, q: str | None = None) -> list[StudentEventOut]:
-    major = _student_major(db, student_id)
-    query = _event_query(student_id).where(Event.event_date >= date.today())
+def list_events(
+    db: Session,
+    student_id: int,
+    *,
+    q: str | None = None,
+    city: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    major: str | None = None,
+    eligibility: str | None = None,
+    eligible_only: bool = False,
+) -> list[StudentEventOut]:
+    student_major = _student_major(db, student_id)
+    query = _event_query(student_id).where(Event.event_date >= max(start_date or date.today(), date.today()))
     if q:
         query = query.where(Event.name.ilike(_like_pattern(q)))
+    if city:
+        query = query.where(Event.location.ilike(_like_pattern(city)))
+    if end_date:
+        query = query.where(Event.event_date <= end_date)
+    if major:
+        pattern = _like_pattern(major)
+        query = query.where(
+            or_(
+                Event.eligibility.is_(None),
+                Event.eligibility == "",
+                Event.eligibility.ilike("%everyone%"),
+                Event.eligibility.ilike("%all majors%"),
+                Event.eligibility.ilike(pattern),
+            )
+        )
+    if eligibility:
+        query = query.where(Event.eligibility.ilike(_like_pattern(eligibility)))
     rows = db.execute(query.order_by(Event.event_date, Event.event_time, Event.id)).all()
-    return [
-        _event_out(event, company, registration_id, _is_eligible(event.eligibility, major))
+    events = [
+        _event_out(event, company, registration_id, _is_eligible(event.eligibility, student_major))
         for event, company, registration_id in rows
     ]
+    return [event for event in events if event.eligible] if eligible_only else events
 
 
 def get_event(db: Session, student_id: int, event_id: int) -> StudentEventOut:

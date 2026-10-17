@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.exceptions import register_exception_handlers
 from app.routers import (
+    assistant,
     applications,
     auth,
     companies,
@@ -37,7 +38,7 @@ app.add_middleware(
 
 register_exception_handlers(app)
 
-for router in (auth, student_auth, student_profile, student_jobs, student_applications, student_events, companies, jobs, applications, events, students, messages, team, dashboards):
+for router in (assistant, auth, student_auth, student_profile, student_jobs, student_applications, student_events, companies, jobs, applications, events, students, messages, team, dashboards):
     app.include_router(router.router)
 
 # Only profile pictures are public. Resumes are served through the

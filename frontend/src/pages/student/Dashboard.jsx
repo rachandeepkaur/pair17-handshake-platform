@@ -9,6 +9,7 @@ import { useFetch } from '../../hooks/useFetch'
 import { getMyApplications } from '../../services/studentApplicationService'
 import { getStudentJobs } from '../../services/studentJobService'
 import { formatDate } from '../../utils/format'
+import ChatWidget from '../../components/assistant/ChatWidget'
 
 const completedFields = ['career_objective', 'degree', 'major', 'graduation_year', 'skills', 'city']
 
@@ -46,6 +47,7 @@ export default function StudentDashboard() {
           {jobs.loading ? <div className="px-5"><RowSkeleton /><RowSkeleton /></div> : jobs.data?.items?.length ? <ul className="divide-y divide-gray-100">{jobs.data.items.map((job) => <li key={job.id}><Link to={`/student/jobs/${job.id}`} className="block px-5 py-4 hover:bg-gray-50"><span className="block truncate text-sm font-medium text-gray-900">{job.title}</span><span className="mt-1 block truncate text-xs text-gray-500">{job.company_name} · {job.city}</span></Link></li>)}</ul> : <div className="p-5"><EmptyState icon={Briefcase} title="No open jobs right now" description="Check back soon for new opportunities." /></div>}
         </Card>
       </div>
+      <ChatWidget />
     </div>
   )
 }
