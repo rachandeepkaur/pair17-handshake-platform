@@ -32,7 +32,9 @@ def test_student_registry_has_all_read_only_part_b_tools() -> None:
 def test_student_prompt_requires_preferences_before_city_recommendations() -> None:
     prompt = system_prompt_for_role("student")
 
-    assert "call get_student_preferences before\nsearch_jobs" in prompt
+    assert "first call get_student_preferences, then call search_jobs" in prompt
+    assert "MUST call a tool" in prompt
+    assert "For jobs or internships, call search_jobs." in prompt
 
 
 def test_get_student_preferences_reports_missing_preferences(monkeypatch) -> None:

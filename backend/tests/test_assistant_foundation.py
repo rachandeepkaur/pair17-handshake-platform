@@ -39,6 +39,7 @@ def test_ollama_client_sends_schemas_and_parses_tool_calls() -> None:
         payload = json.loads(request.content)
         assert payload["model"] == "test-model"
         assert payload["stream"] is False
+        assert payload["think"] is False
         assert payload["tools"][0]["function"]["name"] == "example_tool"
         return httpx.Response(
             200,

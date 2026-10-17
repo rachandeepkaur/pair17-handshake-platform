@@ -26,7 +26,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
 
-    ollama_model: str = "llama3"
+    # qwen3 supports Ollama's native tool-calling format used by the assistant.
+    ollama_model: str = "qwen3:8b"
     ollama_host: str = "http://localhost:11434"
 
     @property

@@ -1,6 +1,7 @@
 """The only module that communicates with the local Ollama service."""
 
 from collections.abc import Sequence
+from functools import lru_cache
 from typing import Protocol
 
 import httpx
@@ -40,6 +41,9 @@ class OllamaClient:
             "messages": message_history(messages),
             "tools": [tool.as_ollama_tool() for tool in tools],
             "stream": False,
+            # The agent loop, rather than the model's reasoning mode, handles
+            # multi-step work. This keeps Qwen's tool calls within the timeout.
+            "think": False,
         }
         try:
             response = self._http_client.post(f"{self.host}/api/chat", json=payload)
@@ -85,3 +89,10 @@ class OllamaClient:
                 )
             )
         return tool_calls
+
+
+@lru_cache
+def get_model_client() -> OllamaClient:
+    """Provide one reusable local-model client to assistant API requests."""
+
+    return OllamaClient()
