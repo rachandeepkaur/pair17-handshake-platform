@@ -2,15 +2,7 @@
 
 from app.assistant.tools.company import company_tool_registry
 from app.assistant.tools.schemas import ToolRegistry
-
-
-STUDENT_ASSISTANT_UNAVAILABLE = "Student assistant tools are not available yet."
-
-
-def student_tool_registry() -> ToolRegistry:
-    """Temporary empty registry; Part B student tools are added in a later slice."""
-
-    return ToolRegistry(role="student", unavailable_message=STUDENT_ASSISTANT_UNAVAILABLE)
+from app.assistant.tools.student import student_tool_registry
 
 
 def tool_registry_for_role(role: str) -> ToolRegistry:

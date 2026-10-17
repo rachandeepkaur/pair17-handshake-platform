@@ -5,6 +5,7 @@ from app.models.company_member import CompanyMember, TeamInvitation
 from app.models.event import Event
 from app.models.job import Job
 from app.models.message import Conversation, Message
+from app.models.preference import Preference
 from app.models.registration import Registration
 from app.models.student import Student
 
@@ -17,6 +18,7 @@ __all__ = [
     "Event",
     "Job",
     "Message",
+    "Preference",
     "Registration",
     "Student",
     "TeamInvitation",

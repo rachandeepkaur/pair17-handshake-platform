@@ -1,6 +1,7 @@
 from datetime import date
+from decimal import Decimal
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import BadRequestError, NotFoundError
@@ -47,8 +48,14 @@ def list_jobs(
     db: Session,
     *,
     q: str | None = None,
+    title: str | None = None,
+    company: str | None = None,
     category: str | None = None,
     city: str | None = None,
+    min_salary: Decimal | None = None,
+    skills: str | None = None,
+    deadline_on_or_before: date | None = None,
+    remote: bool | None = None,
     limit: int = 20,
     offset: int = 0,
 ) -> Page[StudentJobOut]:
@@ -59,10 +66,24 @@ def list_jobs(
     if q:
         pattern = _like_pattern(q)
         query = query.where(or_(Job.title.ilike(pattern), Company.company_name.ilike(pattern)))
+    if title:
+        query = query.where(Job.title.ilike(_like_pattern(title)))
+    if company:
+        query = query.where(Company.company_name.ilike(_like_pattern(company)))
     if category:
         query = query.where(Job.category == category)
     if city:
         query = query.where(Job.city.ilike(_like_pattern(city)))
+    if min_salary is not None:
+        query = query.where(Job.salary >= min_salary)
+    if skills:
+        skill_terms = [term.strip() for term in skills.split(",") if term.strip()]
+        if skill_terms:
+            query = query.where(and_(*(Job.skills_required.ilike(_like_pattern(term)) for term in skill_terms)))
+    if deadline_on_or_before is not None:
+        query = query.where(Job.deadline <= deadline_on_or_before)
+    if remote is not None:
+        query = query.where(Job.is_remote == remote)
 
     count_query = select(func.count()).select_from(query.subquery())
     total = db.scalar(count_query) or 0

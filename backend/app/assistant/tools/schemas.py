@@ -4,6 +4,8 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from sqlalchemy.orm import Session
+
 
 Message = dict[str, Any]
 
@@ -14,6 +16,7 @@ class AssistantContext:
 
     account_id: int
     role: str
+    db: Session | None = None
 
 
 @dataclass(frozen=True)
