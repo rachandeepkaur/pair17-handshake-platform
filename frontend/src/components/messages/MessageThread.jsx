@@ -20,7 +20,7 @@ function Attachment({ to, icon: Icon, label, title, mine }) {
   )
 }
 
-export default function MessageThread({ messages }) {
+export default function MessageThread({ messages, participantSide = 'company', attachmentBasePath = '/company' }) {
   const endRef = useRef(null)
   const lastId = messages.at(-1)?.id
 
@@ -39,7 +39,7 @@ export default function MessageThread({ messages }) {
   return (
     <ol className="flex-1 space-y-3 overflow-y-auto p-4" aria-label="Messages">
       {messages.map((message, index) => {
-        const mine = message.sender_side === 'company'
+        const mine = message.sender_side === participantSide
         const previous = messages[index - 1]
         const showSender = !previous || previous.sender_name !== message.sender_name
         return (
@@ -53,7 +53,7 @@ export default function MessageThread({ messages }) {
               <p className="whitespace-pre-line break-words">{message.body}</p>
               {message.job && (
                 <Attachment
-                  to={`/company/jobs/${message.job.id}`}
+                  to={`${attachmentBasePath}/jobs/${message.job.id}`}
                   icon={Briefcase}
                   label="Invitation to apply"
                   title={message.job.title}
@@ -62,7 +62,7 @@ export default function MessageThread({ messages }) {
               )}
               {message.event && (
                 <Attachment
-                  to={`/company/events/${message.event.id}`}
+                  to={`${attachmentBasePath}/events/${message.event.id}`}
                   icon={CalendarDays}
                   label={`Event · ${formatDate(message.event.event_date)}`}
                   title={message.event.name}

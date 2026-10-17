@@ -6,7 +6,16 @@ import { errorMessage } from '../../services/api'
 import { formatDate } from '../../utils/format'
 import { MESSAGE_TEMPLATES, inviteToApplyText, inviteToEventText } from '../../utils/messageTemplates'
 
-export default function MessageComposer({ conversation, companyName, jobs, events, canWrite, onSend }) {
+export default function MessageComposer({
+  conversation,
+  companyName,
+  jobs = [],
+  events = [],
+  canWrite = true,
+  onSend,
+  recipientName,
+  showCompanyTools = true,
+}) {
   const [body, setBody] = useState('')
   const [attachment, setAttachment] = useState(null)
   const [sending, setSending] = useState(false)
@@ -21,6 +30,7 @@ export default function MessageComposer({ conversation, companyName, jobs, event
   }
 
   const student = conversation.student
+  const recipient = recipientName || student.name
   const fill = (text) => setBody((current) => (current.trim() ? `${current}\n\n${text}` : text))
 
   const submit = async () => {
@@ -70,7 +80,7 @@ export default function MessageComposer({ conversation, companyName, jobs, event
       )}
 
       <label htmlFor="message-body" className="sr-only">
-        Message to {student.name}
+        Message to {recipient}
       </label>
       <textarea
         id="message-body"
@@ -79,7 +89,7 @@ export default function MessageComposer({ conversation, companyName, jobs, event
         onChange={(event) => setBody(event.target.value)}
         onKeyDown={handleKeyDown}
         maxLength={5000}
-        placeholder={`Message ${student.name}…`}
+        placeholder={`Message ${recipient}…`}
         className="w-full resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-brand-400"
       />
       {error && (
@@ -89,7 +99,7 @@ export default function MessageComposer({ conversation, companyName, jobs, event
       )}
 
       <div className="mt-2 flex flex-wrap items-center gap-1">
-        <Popover label="Templates" icon={FileText}>
+        {showCompanyTools && <Popover label="Templates" icon={FileText}>
           {(close) =>
             MESSAGE_TEMPLATES.map((template) => (
               <PopoverItem
@@ -102,9 +112,9 @@ export default function MessageComposer({ conversation, companyName, jobs, event
               />
             ))
           }
-        </Popover>
+        </Popover>}
 
-        <Popover label="Invite to apply" icon={Briefcase}>
+        {showCompanyTools && <Popover label="Invite to apply" icon={Briefcase}>
           {(close) =>
             jobs.length === 0 ? (
               <p className="px-3 py-2 text-sm text-gray-500">No open jobs to invite to.</p>
@@ -123,9 +133,9 @@ export default function MessageComposer({ conversation, companyName, jobs, event
               ))
             )
           }
-        </Popover>
+        </Popover>}
 
-        <Popover label="Invite to event" icon={CalendarDays}>
+        {showCompanyTools && <Popover label="Invite to event" icon={CalendarDays}>
           {(close) =>
             events.length === 0 ? (
               <p className="px-3 py-2 text-sm text-gray-500">No upcoming events to invite to.</p>
@@ -144,7 +154,7 @@ export default function MessageComposer({ conversation, companyName, jobs, event
               ))
             )
           }
-        </Popover>
+        </Popover>}
 
         <span className="ml-auto hidden text-xs text-gray-400 sm:inline">Enter to send · Shift+Enter for a new line</span>
         <Button size="sm" icon={Send} onClick={submit} disabled={!body.trim() || sending} className="ml-2">

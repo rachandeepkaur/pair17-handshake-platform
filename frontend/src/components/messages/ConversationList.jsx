@@ -12,6 +12,7 @@ export default function ConversationList({
   onQueryChange,
   unreadOnly,
   onUnreadOnlyChange,
+  participantSide = 'company',
 }) {
   return (
     <div className="flex h-full flex-col">
@@ -22,8 +23,8 @@ export default function ConversationList({
             type="search"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Search by student name"
-            aria-label="Search conversations by student name"
+            placeholder={`Search by ${participantSide === 'company' ? 'student' : 'company'} name`}
+            aria-label={`Search conversations by ${participantSide === 'company' ? 'student' : 'company'} name`}
             className="h-9 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm focus:border-brand-400 focus:bg-white"
           />
         </div>
@@ -62,6 +63,10 @@ export default function ConversationList({
             {conversations.map((conversation) => {
               const active = conversation.id === activeId
               const unread = conversation.unread_count > 0
+              const other = participantSide === 'company'
+                ? conversation.student
+                : { name: conversation.company.company_name }
+              const lastWasMine = conversation.last_message?.sender_side === participantSide
               return (
                 <li key={conversation.id}>
                   <button
@@ -71,11 +76,11 @@ export default function ConversationList({
                       active ? 'border-brand-600 bg-brand-50/60' : 'border-transparent hover:bg-gray-50'
                     }`}
                   >
-                    <Avatar name={conversation.student.name} size="sm" />
+                    <Avatar name={other.name} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
                         <span className={`truncate text-sm ${unread ? 'font-semibold text-gray-900' : 'font-medium text-gray-800'}`}>
-                          {conversation.student.name}
+                          {other.name}
                         </span>
                         {conversation.last_message && (
                           <span className="shrink-0 text-xs text-gray-400">
@@ -86,7 +91,7 @@ export default function ConversationList({
                       <span className="flex items-center justify-between gap-2">
                         <span className={`truncate text-xs ${unread ? 'text-gray-800' : 'text-gray-500'}`}>
                           {conversation.last_message
-                            ? `${conversation.last_message.sender_side === 'company' ? 'You: ' : ''}${conversation.last_message.body}`
+                            ? `${lastWasMine ? 'You: ' : ''}${conversation.last_message.body}`
                             : 'No messages yet'}
                         </span>
                         {unread && (
