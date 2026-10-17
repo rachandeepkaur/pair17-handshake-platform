@@ -8,6 +8,7 @@ from app.assistant.tools.get_job_details import get_job_details
 from app.assistant.tools.get_student_preferences import get_student_preferences
 from app.assistant.tools.search_events import search_events
 from app.assistant.tools.search_jobs import search_jobs
+from app.assistant.tools.save_job_or_event import save_job_or_event
 from app.assistant.tools.schemas import AssistantContext
 from app.core.exceptions import NotFoundError
 
@@ -24,6 +25,7 @@ def test_student_registry_has_all_read_only_part_b_tools() -> None:
         "search_jobs",
         "get_job_details",
         "search_events",
+        "save_job_or_event",
     ]
 
 
@@ -122,3 +124,36 @@ def test_search_events_passes_date_and_eligibility_filters(monkeypatch) -> None:
     assert captured["major"] == "Computer Science"
     assert captured["eligible_only"] is True
     assert "ID 8: Technology Career Fair 8" in result
+
+
+def test_save_job_or_event_creates_a_saved_item(monkeypatch) -> None:
+    added = []
+    committed = []
+    db = SimpleNamespace(
+        scalar=lambda _query: None,
+        add=added.append,
+        commit=lambda: committed.append(True),
+        rollback=lambda: None,
+    )
+    monkeypatch.setattr("app.assistant.tools.save_job_or_event._visibility_error", lambda *_args: None)
+
+    result = save_job_or_event(AssistantContext(account_id=12, role="student", db=db), {"item_type": "job", "item_id": 4})
+
+    assert result == "Saved job 4 for this student."
+    assert added[0].student_id == 12
+    assert added[0].item_type == "job"
+    assert added[0].item_id == 4
+    assert committed == [True]
+
+
+def test_save_job_or_event_rejects_duplicates() -> None:
+    db = SimpleNamespace(
+        scalar=lambda _query: 8,
+        add=lambda _item: None,
+        commit=lambda: None,
+        rollback=lambda: None,
+    )
+
+    result = save_job_or_event(AssistantContext(account_id=12, role="student", db=db), {"item_type": "event", "item_id": 7})
+
+    assert result == "Event 7 is already saved."

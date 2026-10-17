@@ -11,7 +11,7 @@ tool calls are complete. For a request to find an internship in the student's
 city or to make recommendations, call get_student_preferences before
 search_jobs and use the returned preferences when they are available."""
 
-COMPANY_UNAVAILABLE_PROMPT = "Company assistant tools are not available yet."
+COMPANY_UNAVAILABLE_PROMPT = "company prompt goes here"
 
 
 def system_prompt_for_role(role: str) -> str:

@@ -7,6 +7,7 @@ from app.models.job import Job
 from app.models.message import Conversation, Message
 from app.models.preference import Preference
 from app.models.registration import Registration
+from app.models.saved_item import SavedItem
 from app.models.student import Student
 
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     "Message",
     "Preference",
     "Registration",
+    "SavedItem",
     "Student",
     "TeamInvitation",
 ]
