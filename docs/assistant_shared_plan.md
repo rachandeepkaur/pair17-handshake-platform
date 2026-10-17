@@ -29,7 +29,7 @@ No frontend component, route, or tool calls Ollama directly.
 
 ```text
 backend/app/assistant/
-  client.py        Model client interface and Ollama implementation
+  llm_client.py    Model client interface and Ollama implementation
   agent.py         Bounded hand-built agent loop
   schemas.py       Message, tool, and context types
   prompts.py       System prompts
