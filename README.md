@@ -10,7 +10,7 @@ Distributed Systems for Data Engineering, Pair 17: Handshake-style job and event
 | PORT_BASE | 9170 (= 9000 + 17 × 10) |
 | Database / Kafka prefix | `p17` |
 | SEED | 17 |
-| CITY_SET | TODO — the three cities assigned to pair 17 on Canvas |
+| CITY_SET | Palo Alto, Mountain View, Menlo Park |
 
 ## Prerequisites
 
@@ -30,7 +30,7 @@ cp .env.example .env
 cp frontend/.env.example frontend/.env
 ```
 
-Edit `.env` with your local MySQL credentials and the real `CITY_SET` for pair 17.
+Edit `.env` with your local MySQL credentials. Pair 17 uses Palo Alto, Mountain View, and Menlo Park.
 
 ### 2. Database
 
@@ -46,11 +46,22 @@ and makes each existing company's signup account its owner:
 mysql -u root -p < backend/db/migrations/001_team_messages.sql
 ```
 
-Once the seed generator is implemented, populate sample data with:
+Populate a fresh database with deterministic demo data (50 companies, 200
+students, 300 jobs, 1,500 applications, and 100 events) with:
 
 ```bash
 python backend/db/seed/generate_seed.py
 ```
+
+The generator validates that `CITY_SET` contains your three assigned cities
+and refuses to overwrite existing data. To replace all database application data:
+
+```bash
+python backend/db/seed/generate_seed.py --reset
+```
+
+Seeded accounts use password `SeedPass17!`. For example, use
+`student001@seed.p17.example` or `company001@seed.p17.example`.
 
 ### 3. Backend (FastAPI)
 

@@ -1,9 +1,10 @@
 # Architecture & Implementation Notes — Pair 17
 
 Status snapshot of what is built and working: the **company portal** is
-feature-complete against the Lab 1 Part A company rubric, plus team accounts, messaging, and settings. The student portal,
-seed generator, and AI assistant (Parts B/C) are not built yet. See
-`README.md` for setup/run commands.
+feature-complete against the Lab 1 Part A company rubric, plus team accounts,
+messaging, and settings. The student portal and deterministic seed generator
+are implemented; the AI assistant remains in progress. See `README.md` for
+setup/run commands.
 
 ## 1. Stack
 
@@ -266,13 +267,10 @@ reflow to one column at phone width.
 
 ## 11. Known gaps
 
-- **No seed data yet.** The rubric's generator (300 jobs, 1,500 applications,
-  200 students, 50 companies, 100 events across `CITY_SET` with
-  `random_state = SEED`) is not written; `CITY_SET` in `.env` is still a
-  placeholder.
-- **Student-side features** (signup, applying with a resume upload, event
-  registration) aren't built, so applications and registrations currently
-  enter the database only through fixtures or the future seed script.
+- **Seed data requires configuration.** `backend/db/seed/generate_seed.py`
+  creates 300 jobs, 1,500 applications, 200 students, 50 companies, and 100
+  events across `CITY_SET`, using `SEED`. Pair 17's assigned cities are Palo
+  Alto, Mountain View, and Menlo Park.
 - Job postings can't be edited or deleted. This isn't required by the rubric.
 - **No email delivery.** Invitations are copy-a-link, and there are no
   message notifications outside the app.

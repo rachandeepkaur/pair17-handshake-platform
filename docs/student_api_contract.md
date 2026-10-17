@@ -49,10 +49,9 @@ The existing shared models are `Student`, `Company`, `Job`, `Event`,
 | `GET /student/applications` | **Implemented.** List the current student's applications; support status filtering | `applications`, `jobs`, `companies` |
 | `GET /student/events?q=` | **Implemented.** List upcoming events in increasing date order; optionally filter by event name | `events`, `companies` |
 | `GET /student/events/{event_id}` | **Implemented.** Return one upcoming event and the student's registration state | `events`, `companies`, `registrations` |
-| `POST /student/events/{event_id}/register` | **Implemented.** Create one registration for the current student | `registrations`, `events`, `students` |
+| `POST /student/events/{event_id}/register` | **Implemented.** Create one registration for an eligible current student | `registrations`, `events`, `students` |
 | `GET /student/events/registrations` | **Implemented.** List the current student's registered events | `registrations`, `events`, `companies` |
-| `GET /student/directory` | Browse/search enrolled students by name or college and filter by major | `students` |
-| `GET /student/directory/{student_id}` | Return a student profile suitable for directory viewing | `students` |
+| `GET /students` | **Implemented.** Shared read-only directory search for signed-in users by name or college; filter by major | `students` |
 
 ## Route separation
 
@@ -76,8 +75,9 @@ modified by student code:
   deadline, with a PDF resume, and without a prior application by the same
   student for that job.
 - Event registration may be created only for an existing upcoming event and
-  only once per student. Eligibility is currently display text supplied by the
-  company, rather than structured criteria that the application can enforce.
+  only once per student. Blank eligibility, `Everyone`, `All`, and `All majors`
+  permit all students; otherwise the value is a comma-separated list of allowed
+  majors matched case-insensitively against the student's saved major.
 - Resumes remain private. A student may access only their own uploaded resume;
   company-side resume preview remains governed by the existing company
   ownership checks.
