@@ -24,7 +24,7 @@ export default function StudentApplyModal({ job, onApply, onClose }) {
     setError('')
     try { await onApply(file) } catch (err) { setError(errorMessage(err, 'Could not submit application.')) } finally { setSubmitting(false) }
   }
-  return <Modal title={`Apply to ${job.title}`} onClose={onClose}>
+  return <Modal open title={`Apply to ${job.title}`} onClose={onClose}>
     <p className="text-sm text-gray-600">Upload the PDF resume you want to send to {job.company_name}.</p>
     <input ref={inputRef} type="file" accept="application/pdf,.pdf" className="sr-only" onChange={selectFile} />
     <button type="button" onClick={() => inputRef.current?.click()} className="mt-5 w-full rounded-xl border border-dashed border-gray-300 px-4 py-5 text-sm font-medium text-gray-700 hover:bg-gray-50">{file ? file.name : 'Choose PDF resume'}</button>

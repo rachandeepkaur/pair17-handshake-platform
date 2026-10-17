@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Building2, CalendarClock, DollarSign, Mail, MapPin } from 'lucide-react'
 import Button from '../../components/ui/Button'
 import StudentApplyModal from '../../components/applications/StudentApplyModal'
-import { useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import Card from '../../components/ui/Card'
 import PageHeader from '../../components/ui/PageHeader'
@@ -12,7 +12,7 @@ import { useFetch } from '../../hooks/useFetch'
 import { getStudentJob } from '../../services/studentJobService'
 import { jobCategoryLabel } from '../../utils/constants'
 import { formatDate, formatSalary } from '../../utils/format'
-import { applyToJob } from '../../services/studentApplicationService'
+import { applyToJob, getMyApplications } from '../../services/studentApplicationService'
 
 function Fact({ icon: Icon, label, children }) {
   return <div className="flex items-start gap-3"><Icon size={18} className="mt-0.5 text-gray-400" /><div><p className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p><p className="text-sm text-gray-900">{children}</p></div></div>
@@ -20,16 +20,22 @@ function Fact({ icon: Icon, label, children }) {
 
 export default function StudentJobDetail() {
   const { jobId } = useParams()
+  const navigate = useNavigate()
   const { data: job, loading, error } = useFetch(() => getStudentJob(jobId), [jobId])
+  const applications = useFetch(getMyApplications, [])
   const [applying, setApplying] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
   if (error) return <div className="space-y-4"><PageHeader title="Job not found" backTo="/student/jobs" backLabel="Back to jobs" /><ErrorMessage message={error} /></div>
   if (loading || !job) return <Skeleton className="h-96 rounded-2xl" />
+  const existingApplication = applications.data?.find((application) => application.job_id === job.id)
+  const actions = applications.loading
+    ? <Button disabled>Checking application…</Button>
+    : existingApplication
+      ? <Button as={Link} to="/student/applications" variant="outline">View application</Button>
+      : <Button onClick={() => setApplying(true)}>Apply now</Button>
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <PageHeader title={job.title} description={`${job.company_name} · ${jobCategoryLabel(job.category)}`} backTo="/student/jobs" backLabel="Back to jobs" actions={!submitted && <Button onClick={() => setApplying(true)}>Apply now</Button>} />
-      {submitted && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">Application submitted with Pending status.</p>}
+      <PageHeader title={job.title} description={`${job.company_name} · ${jobCategoryLabel(job.category)}`} backTo="/student/jobs" backLabel="Back to jobs" actions={actions} />
       <Card className="p-5">
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <Fact icon={MapPin} label="Location">{job.location || job.city}{job.is_remote && ' · Remote'}</Fact>
@@ -41,7 +47,7 @@ export default function StudentJobDetail() {
         <section className="mt-6 border-t border-gray-100 pt-5"><h2 className="text-sm font-semibold text-gray-900">Required skills</h2><div className="mt-2"><SkillTags skills={job.skills_required} /></div></section>
       </Card>
       <Card className="p-5"><h2 className="text-lg font-semibold text-gray-900">About {job.company_name}</h2><p className="mt-2 whitespace-pre-line text-sm text-gray-700">{job.company_description || 'No company description provided.'}</p><p className="mt-4 flex items-center gap-2 text-sm text-gray-700"><MapPin size={16} className="text-gray-400" />{job.company_location}</p><p className="mt-2 flex items-center gap-2 text-sm text-gray-700"><Mail size={16} className="text-gray-400" />{job.company_contact_info || 'Contact information not provided.'}</p></Card>
-      {applying && <StudentApplyModal job={job} onClose={() => setApplying(false)} onApply={async (file) => { await applyToJob(job.id, file); setApplying(false); setSubmitted(true) }} />}
+      {applying && <StudentApplyModal job={job} onClose={() => setApplying(false)} onApply={async (file) => { await applyToJob(job.id, file); navigate('/student/applications') }} />}
     </div>
   )
 }
