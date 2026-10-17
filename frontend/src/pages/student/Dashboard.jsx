@@ -1,5 +1,5 @@
 import { Link, useOutletContext } from 'react-router-dom'
-import { Briefcase, ClipboardList, FileCheck2, Search, UserRound } from 'lucide-react'
+import { Briefcase, CalendarDays, ClipboardList, FileCheck2, MapPin, Search, UserRound } from 'lucide-react'
 import Card, { CardHeader } from '../../components/ui/Card'
 import EmptyState from '../../components/ui/EmptyState'
 import StatCard from '../../components/ui/StatCard'
@@ -8,7 +8,8 @@ import { RowSkeleton, StatCardSkeleton } from '../../components/ui/Skeleton'
 import { useFetch } from '../../hooks/useFetch'
 import { getMyApplications } from '../../services/studentApplicationService'
 import { getStudentJobs } from '../../services/studentJobService'
-import { formatDate } from '../../utils/format'
+import { getStudentEvents } from '../../services/studentEventService'
+import { formatDate, formatTime, isOnOrAfterToday } from '../../utils/format'
 import ChatWidget from '../../components/assistant/ChatWidget'
 
 const completedFields = ['career_objective', 'degree', 'major', 'graduation_year', 'skills', 'city']
@@ -17,8 +18,10 @@ export default function StudentDashboard() {
   const { student, studentError } = useOutletContext()
   const applications = useFetch(getMyApplications, [])
   const jobs = useFetch(() => getStudentJobs({ limit: 3 }), [])
+  const events = useFetch(getStudentEvents, [])
   const profileCompletion = student ? Math.round((completedFields.filter((field) => student[field]).length / completedFields.length) * 100) : 0
   const pendingCount = applications.data?.filter((application) => application.status === 'Pending').length || 0
+  const upcomingEvents = (events.data || []).filter((event) => isOnOrAfterToday(event.event_date)).slice(0, 3)
 
   return (
     <div className="space-y-6">
@@ -43,9 +46,16 @@ export default function StudentDashboard() {
         <Card><CardHeader title="Recent applications" action={<Link to="/student/applications" className="text-sm font-medium text-brand-600 hover:text-brand-700">View all</Link>} />
           {applications.loading ? <div className="px-5"><RowSkeleton /><RowSkeleton /></div> : applications.data?.length ? <ul className="divide-y divide-gray-100">{applications.data.slice(0, 4).map((application) => <li key={application.id} className="flex items-center gap-3 px-5 py-4"><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-gray-900">{application.job_title}</span><span className="block truncate text-xs text-gray-500">{application.company_name} · Applied {formatDate(application.applied_at)}</span></span><StatusBadge status={application.status} /></li>)}</ul> : <div className="p-5"><EmptyState icon={ClipboardList} title="No applications yet" description="Browse jobs to apply to your first opportunity." action={<Link to="/student/jobs" className="text-sm font-semibold text-brand-600 hover:text-brand-700">Browse jobs</Link>} /></div>}
         </Card>
-        <Card><CardHeader title="Opportunities for you" action={<Link to="/student/jobs" className="text-sm font-medium text-brand-600 hover:text-brand-700">Browse all</Link>} />
+        <div className="space-y-6">
+          <Card><CardHeader title="Opportunities for you" action={<Link to="/student/jobs" className="text-sm font-medium text-brand-600 hover:text-brand-700">Browse all</Link>} />
           {jobs.loading ? <div className="px-5"><RowSkeleton /><RowSkeleton /></div> : jobs.data?.items?.length ? <ul className="divide-y divide-gray-100">{jobs.data.items.map((job) => <li key={job.id}><Link to={`/student/jobs/${job.id}`} className="block px-5 py-4 hover:bg-gray-50"><span className="block truncate text-sm font-medium text-gray-900">{job.title}</span><span className="mt-1 block truncate text-xs text-gray-500">{job.company_name} · {job.city}</span></Link></li>)}</ul> : <div className="p-5"><EmptyState icon={Briefcase} title="No open jobs right now" description="Check back soon for new opportunities." /></div>}
-        </Card>
+          </Card>
+          <Card><CardHeader title="Upcoming events" action={<Link to="/student/events" className="text-sm font-medium text-brand-600 hover:text-brand-700">Browse all</Link>} />
+            <div className="p-5">
+              {events.loading ? <RowSkeleton /> : upcomingEvents.length ? <ul className="space-y-3">{upcomingEvents.map((event) => <li key={event.id}><Link to={`/student/events/${event.id}`} className="block rounded-xl border border-gray-100 p-3 hover:border-gray-200 hover:bg-gray-50/60"><span className="flex items-start justify-between gap-3"><span className="min-w-0"><span className="block truncate text-sm font-medium text-gray-900">{event.name}</span><span className="mt-0.5 block truncate text-xs text-brand-700">{event.company_name}</span></span>{event.registered && <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-800">Registered</span>}</span><span className="mt-2 block text-xs text-gray-500">{formatDate(event.event_date)}{event.event_time && ` · ${formatTime(event.event_time)}`}</span>{event.location && <span className="mt-1 flex items-center gap-1 text-xs text-gray-500"><MapPin size={13} aria-hidden="true" /> {event.location}</span>}</Link></li>)}</ul> : <EmptyState icon={CalendarDays} title="No upcoming events" description="Check back soon for employer events." action={<Link to="/student/events" className="text-sm font-semibold text-brand-600 hover:text-brand-700">Browse events</Link>} />}
+            </div>
+          </Card>
+        </div>
       </div>
       <ChatWidget />
     </div>
