@@ -60,8 +60,20 @@ class AssistantChatRequest(BaseModel):
         return value
 
 
+class AssistantConfirmRequest(BaseModel):
+    conversation: list[AssistantConversationMessage] = Field(min_length=1, max_length=50)
+    approved: bool
+
+
+class AssistantPendingAction(BaseModel):
+    tool_name: str
+    arguments: dict[str, Any]
+    summary: str
+
+
 class AssistantChatResponse(BaseModel):
     answer: str
     conversation: list[AssistantConversationMessage]
     tool_call_count: int
     stopped_at_iteration_limit: bool
+    pending_action: AssistantPendingAction | None = None

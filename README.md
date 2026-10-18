@@ -102,6 +102,20 @@ cd backend
 pytest
 ```
 
+## Assistant evaluations (real model)
+
+Run from the repository root with Ollama running and the database seeded. Each one is slow on a CPU (several minutes per turn).
+
+```bash
+python backend/evaluation/run_transcripts.py         # Part B: five transcripts -> docs/transcripts/
+python backend/evaluation/run_confirmation_demo.py   # Part C: decline/approve a save -> docs/evaluation/confirmation_demo.txt
+python backend/evaluation/run_injection_eval.py      # Part C: 5 injection queries, defense off/on -> docs/evaluation/injection_eval.md
+python backend/evaluation/run_reliability_eval.py    # Part C: 22 turns, repair off/on -> docs/evaluation/reliability_eval.md
+```
+
+`run_injection_eval.py` adds one job and one event with injected instructions. Remove them with
+`python backend/db/seed/injected_content.py --remove`.
+
 ## Quick smoke test
 
 1. Start the backend and frontend as above.

@@ -21,6 +21,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !isAuthCall && localStorage.getItem('token')) {
       localStorage.removeItem('token')
       localStorage.removeItem('role')
+      sessionStorage.removeItem('assistant-conversation')
       window.location.assign('/login')
     }
     return Promise.reject(error)

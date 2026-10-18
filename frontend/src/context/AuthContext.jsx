@@ -6,6 +6,8 @@ export const AuthContext = createContext(null)
 // Storage is written synchronously (not in an effect) so the very first API
 // call made by the page we navigate to already carries the new token.
 function persist(token, role) {
+  // A new session (sign-in or sign-out) never inherits another user's chat.
+  sessionStorage.removeItem('assistant-conversation')
   if (token && role) {
     localStorage.setItem('token', token)
     localStorage.setItem('role', role)

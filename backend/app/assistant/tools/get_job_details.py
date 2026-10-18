@@ -36,11 +36,15 @@ def get_job_details(context: AssistantContext, arguments: dict[str, Any]) -> str
 
 TOOL = ToolDefinition(
     name="get_job_details",
-    description="Use after search_jobs when the student asks for full details about one job ID.",
+    description=(
+        "Return full details for one job: description, skills, salary, deadline, company details, contact, "
+        "and posting date. Use after search_jobs when the student asks about a specific job ID. Returns "
+        "an error message if the ID does not exist."
+    ),
     parameters={
         "type": "object",
         "required": ["job_id"],
-        "properties": {"job_id": {"type": "integer", "description": "The job ID from search_jobs."}},
+        "properties": {"job_id": {"type": "integer", "description": "The numeric job ID shown by search_jobs."}},
     },
     handler=get_job_details,
 )

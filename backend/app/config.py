@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # qwen3 supports Ollama's native tool-calling format used by the assistant.
     ollama_model: str = "qwen3:8b"
     ollama_host: str = "http://localhost:11434"
+    # On CPU-only machines an 8B model can need over a minute for a long answer.
+    ollama_timeout_seconds: float = 360.0
+    # Tool schemas + system prompt take ~1.2k tokens; 8k leaves room for follow-ups.
+    ollama_num_ctx: int = 8192
 
     @property
     def database_url(self) -> str:
