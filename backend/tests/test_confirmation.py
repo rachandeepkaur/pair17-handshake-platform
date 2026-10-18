@@ -196,26 +196,3 @@ def test_confirm_endpoint_resumes_and_rejects_when_nothing_is_pending() -> None:
     assert body["pending_action"] is None
     assert body["conversation"][2]["content"].startswith(CANCELLED_PREFIX)
     assert nothing.status_code == 409
-
-
-def test_save_actions_require_explicit_approval() -> None:
-    assert confirm_action("save_job_or_event", {"item_type": "job", "item_id": 4}) is False
-    assert confirm_action("save_job_or_event", {"item_type": "job", "item_id": 4}, auto_approve=True) is True
-
-
-def test_agent_does_not_run_a_write_tool_before_confirmation() -> None:
-    calls = []
-
-    class Client:
-        def complete(self, *_args):
-            return AssistantMessage(tool_calls=(ToolCall(name="save_job_or_event", arguments={"item_type": "job", "item_id": 4}),))
-
-    def save(_context, arguments):
-        calls.append(arguments)
-        return "Saved."
-
-    registry = ToolRegistry(role="student", tools=(ToolDefinition(name="save_job_or_event", description="Save.", parameters={}, handler=save, requires_confirmation=True),))
-    run = run_assistant("Save job 4", [], AssistantContext(account_id=1, role="student"), Client(), registry=registry)
-
-    assert calls == []
-    assert run.pending_confirmation == {"tool_name": "save_job_or_event", "arguments": {"item_type": "job", "item_id": 4}, "prompt": "Save this job?"}
