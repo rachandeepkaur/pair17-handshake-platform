@@ -60,12 +60,17 @@ export default function Login() {
             {isSubmitting ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
-        <p className="mt-4 text-sm text-gray-600">
-          New company?{' '}
-          <Link to="/signup/company" className="text-blue-600">
-            Create a company account
-          </Link>
-        </p>
+        <div className="mt-4 text-sm text-gray-600">
+          <p>New here? Create a new account:</p>
+          <div className="mt-2 flex gap-4">
+            <Link to="/signup/student" className="text-blue-600">
+              Student
+            </Link>
+            <Link to="/signup/company" className="text-blue-600">
+              Company
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   )
