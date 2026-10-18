@@ -31,7 +31,7 @@ def test_agent_runs_tool_then_returns_final_answer(capsys) -> None:
             ToolDefinition(
                 name="search_jobs",
                 description="Search jobs.",
-                parameters={"type": "object", "properties": {}},
+                parameters={"type": "object", "properties": {"query": {"type": "string"}}},
                 handler=search_tool,
             ),
         ),
@@ -48,7 +48,10 @@ def test_agent_runs_tool_then_returns_final_answer(capsys) -> None:
     assert run.answer == "I found one internship."
     assert run.tool_call_count == 1
     assert run.stopped_at_iteration_limit is False
-    assert client.calls[1][-1] == {"role": "tool", "tool_name": "search_jobs", "content": "Results for internship"}
+    tool_message = client.calls[1][-1]
+    assert tool_message["role"] == "tool" and tool_message["tool_name"] == "search_jobs"
+    assert '<untrusted_data source="search_jobs"' in tool_message["content"]
+    assert "\nResults for internship\n" in tool_message["content"]
     assert "Assistant tool call: search_jobs arguments={'query': 'internship'}" in capsys.readouterr().out
 
 
@@ -62,7 +65,7 @@ def test_agent_stops_at_the_iteration_ceiling(capsys) -> None:
             ToolDefinition(
                 name="search_jobs",
                 description="Search jobs.",
-                parameters={"type": "object", "properties": {}},
+                parameters={"type": "object", "properties": {"query": {"type": "string"}}},
                 handler=search_tool,
             ),
         ),

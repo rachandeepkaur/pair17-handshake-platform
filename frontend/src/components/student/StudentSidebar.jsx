@@ -1,8 +1,9 @@
 import { Link, NavLink } from 'react-router-dom'
-import { Briefcase, CalendarDays, ClipboardList, GraduationCap, LayoutDashboard, MessageSquare, Sparkles, UserRound, X } from 'lucide-react'
+import { Bot, Briefcase, CalendarDays, ClipboardList, GraduationCap, LayoutDashboard, MessageSquare, Sparkles, UserRound, X } from 'lucide-react'
 
 const navigation = [
   { to: '/student/dashboard', label: 'Home', icon: LayoutDashboard },
+  { to: '/student/assistant', label: 'Career assistant', icon: Bot },
   { to: '/student/jobs', label: 'Find jobs', icon: Briefcase },
   { to: '/student/applications', label: 'My applications', icon: ClipboardList },
   { to: '/student/events', label: 'Events', icon: CalendarDays },

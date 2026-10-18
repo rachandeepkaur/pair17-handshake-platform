@@ -1,0 +1,35 @@
+Transcript 02_remote_data_science
+Date: 2026-10-17T18:25:35    Model: qwen3:8b    Iteration ceiling: 5
+Student: Lorelai Gilmore <student001@seed.p17.example> | city Palo Alto | major Computer Science | skills Python, SQL, Pandas, Tableau
+====================================================================================================
+
+USER: Find a remote data science internship.
+  -> TOOL CALL  search_jobs({"category": "internship", "title": "data science", "skills": "Python", "remote": true})
+  <- TOOL RESULT [search_jobs]: Matching jobs:
+                - ID 167: Data Science Intern at NVIDIA | Menlo Park, CA | internship | $104,500 | deadline 2026-11-19
+                - ID 222: Data Science Intern at Intel | Palo Alto, CA | internship | $67,000 | deadline 2026-12-27
+                - ID 57: Data Science Intern at VMware | Palo Alto, CA | internship | $89,500 | deadline 2027-01-01
+                - ID 277: Data Science Intern at Lyft | Mountain View, CA | internship | $29,500 | deadline 2026-10-25
+                - ID 112: Data Science Intern at Google | Mountain View, CA | internship | $52,000 | deadline 2026-11-20
+
+ASSISTANT: Here are some remote data science internships that match your criteria:
+
+1. **ID 167**: Data Science Intern at NVIDIA | Menlo Park, CA | internship | $104,500 | deadline 2026-11-19  
+2. **ID 222**: Data Science Intern at Intel | Palo Alto, CA | internship | $67,000 | deadline 2026-12-27  
+3. **ID 57**: Data Science Intern at VMware | Palo Alto, CA | internship | $89,500 | deadline 2027-01-01  
+4. **ID 277**: Data Science Intern at Lyft | Mountain View, CA | internship | $29,500 | deadline 2026-10-25  
+5. **ID 112**: Data Science Intern at Google | Mountain View, CA | internship | $52,000 | deadline 2026-11-20  
+
+Let me know if you'd like to explore higher-paying options or more details about any of these.
+
+====================================================================================================
+Console output from run_assistant (this run):
+  Assistant tool call: search_jobs arguments={'category': 'internship', 'title': 'data science', 'skills': 'Python', 'remote': True}
+  Assistant tool calls: 1
+Tool calls this run: 1
+
+Requirement checks:
+  [PASS] filters category = internship
+  [PASS] filters by remote status or location
+  [PASS] filters by skills
+  [PASS] targets data science (title or skills)

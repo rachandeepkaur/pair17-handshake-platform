@@ -70,13 +70,16 @@ def _rollback_safely(context: AssistantContext) -> None:
 
 TOOL = ToolDefinition(
     name="save_job_or_event",
-    description="Use only after the student asks to save one job or event ID. Confirmation is required before this write action in Part C.",
+    description=(
+        "Save one job or event to the student's saved list. This changes data, so use it ONLY when the "
+        "student explicitly asks to save a specific job or event ID. Returns a confirmation or a clear error."
+    ),
     parameters={
         "type": "object",
         "required": ["item_type", "item_id"],
         "properties": {
-            "item_type": {"type": "string", "enum": ["job", "event"], "description": "Type of item to save."},
-            "item_id": {"type": "integer", "description": "Job or event ID to save."},
+            "item_type": {"type": "string", "enum": ["job", "event"], "description": "'job' or 'event'."},
+            "item_id": {"type": "integer", "description": "The numeric ID shown by search_jobs or search_events."},
         },
     },
     handler=save_job_or_event,

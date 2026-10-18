@@ -77,15 +77,19 @@ def _boolean_argument(arguments: dict[str, Any], name: str) -> tuple[bool | None
 
 TOOL = ToolDefinition(
     name="search_events",
-    description="Use to find upcoming events by name, city, date range, major, or eligibility.",
+    description=(
+        "Search upcoming recruiting events. Use whenever the student asks about events, fairs, or info "
+        "sessions. Filter by name, city, date range, major, or eligibility; for 'next month' pass that "
+        "month's first and last day. Returns a short list or a plain no-match message."
+    ),
     parameters={
         "type": "object",
         "properties": {
             "name": {"type": "string", "description": "Words in the event name."},
             "city": {"type": "string", "description": "Event city."},
-            "start_date": {"type": "string", "format": "date", "description": "Earliest event date."},
-            "end_date": {"type": "string", "format": "date", "description": "Latest event date."},
-            "major": {"type": "string", "description": "Major the event should accept."},
+            "start_date": {"type": "string", "format": "date", "description": "Earliest event date (YYYY-MM-DD)."},
+            "end_date": {"type": "string", "format": "date", "description": "Latest event date (YYYY-MM-DD)."},
+            "major": {"type": "string", "description": "Only events open to this major, e.g. 'Computer Science'."},
             "eligibility": {"type": "string", "description": "Text in the event eligibility requirement."},
             "eligible_only": {"type": "boolean", "description": "Return only events eligible for the current student."},
         },

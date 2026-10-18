@@ -32,6 +32,7 @@ import StudentEventDetail from '../pages/student/EventDetail'
 import RegisteredEvents from '../pages/student/RegisteredEvents'
 import People from '../pages/student/People'
 import StudentMessages from '../pages/student/Messages'
+import StudentAssistant from '../pages/student/Assistant'
 import NotFound from '../pages/NotFound'
 import ProtectedRoute from './ProtectedRoute'
 
@@ -56,6 +57,7 @@ export default function AppRoutes() {
         <Route path="events/:eventId" element={<StudentEventDetail />} />
         <Route path="people" element={<People />} />
         <Route path="messages" element={<StudentMessages />} />
+        <Route path="assistant" element={<StudentAssistant />} />
       </Route>
 
       <Route

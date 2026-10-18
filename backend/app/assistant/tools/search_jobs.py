@@ -92,18 +92,31 @@ def _salary(value: Decimal | None) -> str:
 
 TOOL = ToolDefinition(
     name="search_jobs",
-    description="Use to find active jobs by title, company, category, city, salary, skills, deadline, or remote status.",
+    description=(
+        "Search open job postings. Use whenever the student asks for jobs or internships, including "
+        "follow-ups that narrow a previous search (closer, higher paying, different skill). Returns up to "
+        "10 jobs with id, title, company, location, category, salary, and deadline, or a plain "
+        "no-match message. Only report jobs this tool returns."
+    ),
     parameters={
         "type": "object",
         "properties": {
-            "title": {"type": "string", "description": "Words in the job title."},
-            "company": {"type": "string", "description": "Words in the company name."},
-            "category": {"type": "string", "enum": ["full_time", "part_time", "on_campus", "internship"]},
-            "city": {"type": "string", "description": "Job city."},
-            "min_salary": {"type": "number", "description": "Minimum listed salary."},
-            "skills": {"type": "string", "description": "Comma-separated required skills."},
-            "deadline_on_or_before": {"type": "string", "format": "date", "description": "Latest acceptable deadline."},
-            "remote": {"type": "boolean", "description": "Whether the job must be remote."},
+            "title": {"type": "string", "description": "Words that must appear in the job title, e.g. 'data science'."},
+            "company": {"type": "string", "description": "Words that must appear in the company name, e.g. 'Google'."},
+            "category": {
+                "type": "string",
+                "enum": ["full_time", "part_time", "on_campus", "internship"],
+                "description": "Employment type. Use 'internship' for internships.",
+            },
+            "city": {"type": "string", "description": "City the job is in, e.g. the student's own city for 'near me'."},
+            "min_salary": {"type": "number", "description": "Lowest acceptable listed salary in US dollars; use for 'higher paying'."},
+            "skills": {"type": "string", "description": "Comma-separated skills; a job matches only if it requires all of them, so pass one or two key skills."},
+            "deadline_on_or_before": {
+                "type": "string",
+                "format": "date",
+                "description": "Only jobs whose application deadline is on or before this date (YYYY-MM-DD).",
+            },
+            "remote": {"type": "boolean", "description": "true for remote jobs only, false for on-site only; omit if not specified."},
         },
     },
     handler=search_jobs,

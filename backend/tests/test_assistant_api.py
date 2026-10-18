@@ -34,7 +34,7 @@ def test_chat_endpoint_runs_the_assistant_for_a_student() -> None:
     try:
         response = TestClient(app).post(
             "/assistant/chat",
-            json={"message": "Find an internship", "conversation": []},
+            json={"message": "Hello there", "conversation": []},
         )
     finally:
         app.dependency_overrides.clear()
