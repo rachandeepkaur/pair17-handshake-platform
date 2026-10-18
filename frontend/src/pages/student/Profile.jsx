@@ -4,12 +4,14 @@ import { Mail, MapPin, Pencil, School } from 'lucide-react'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import ProfilePicture from '../../components/profile/ProfilePicture'
 import StudentProfileForm from '../../components/profile/StudentProfileForm'
+import StudentPreferences from '../../components/profile/StudentPreferences'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import PageHeader from '../../components/ui/PageHeader'
 import Skeleton from '../../components/ui/Skeleton'
 import { useFetch } from '../../hooks/useFetch'
 import { getMyProfile, updateMyProfile, uploadMyPicture } from '../../services/studentProfileService'
+import { getPreferences } from '../../services/preferenceService'
 
 const detail = (label, value) => (
   <div>
@@ -20,6 +22,7 @@ const detail = (label, value) => (
 
 export default function StudentProfile() {
   const { data: profile, loading, error, setData } = useFetch(getMyProfile, [])
+  const preferences = useFetch(getPreferences, [])
   const { reloadStudent } = useOutletContext()
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -81,6 +84,7 @@ export default function StudentProfile() {
           )}
         </div>
       </Card>
+      {preferences.data && <StudentPreferences preferences={preferences.data} onSaved={preferences.setData} />}
     </div>
   )
 }

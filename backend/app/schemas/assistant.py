@@ -47,9 +47,17 @@ class AssistantConversationMessage(BaseModel):
         return message
 
 
+class AssistantConfirmation(BaseModel):
+    tool_name: str = Field(min_length=1, max_length=100)
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    approved: bool = False
+    prompt: str | None = None
+
+
 class AssistantChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2_000)
     conversation: list[AssistantConversationMessage] = Field(default_factory=list, max_length=50)
+    confirmation: AssistantConfirmation | None = None
 
     @field_validator("message")
     @classmethod
@@ -77,3 +85,4 @@ class AssistantChatResponse(BaseModel):
     tool_call_count: int
     stopped_at_iteration_limit: bool
     pending_action: AssistantPendingAction | None = None
+    pending_confirmation: AssistantConfirmation | None = None
