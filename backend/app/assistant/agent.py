@@ -34,6 +34,8 @@ from app.assistant.repair import (
     check_tool_call,
     clean_arguments,
     needs_tool,
+    promised_lookup_reprompt,
+    promises_unfinished_action,
     text_instead_of_tool_reprompt,
     tool_error_reprompt,
     unparsable_call_reprompt,
@@ -237,11 +239,12 @@ class _Run:
                 return self.finish(MODEL_UNAVAILABLE_MESSAGE, record=True)
 
             if not assistant_message.tool_calls:
-                if self.skipped_required_tool():
+                reprompt = self.missing_call_reprompt(assistant_message.content)
+                if reprompt:
                     if self.start_repair(FailureKind.TEXT_INSTEAD_OF_TOOL):
                         self.transient = [
                             assistant_message.as_ollama_message(),
-                            {"role": "user", "content": text_instead_of_tool_reprompt()},
+                            {"role": "user", "content": reprompt},
                         ]
                         continue
                     if self.repair:
@@ -261,15 +264,16 @@ class _Run:
 
         return self.finish(ITERATION_LIMIT_MESSAGE, record=True, iteration_limit=True)
 
-    def skipped_required_tool(self) -> bool:
-        """A text answer to a data request before any tool ran in this run."""
+    def missing_call_reprompt(self, content: str) -> str | None:
+        """The repair prompt for a text answer that should have been a tool call."""
 
-        return (
-            self.user_message is not None
-            and not self.records
-            and bool(self.registry.tools)
-            and needs_tool(self.user_message)
-        )
+        if not self.registry.tools:
+            return None
+        if promises_unfinished_action(content):
+            return promised_lookup_reprompt()
+        if self.user_message is not None and not self.records and needs_tool(self.user_message):
+            return text_instead_of_tool_reprompt()
+        return None
 
     def run_tool_calls(self, calls: Sequence[ToolCall], *, student_decision: bool | None = None) -> PendingAction | None:
         response_failed = False

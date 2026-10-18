@@ -83,5 +83,4 @@ TOOL = ToolDefinition(
         },
     },
     handler=save_job_or_event,
-    requires_confirmation=True,
 )

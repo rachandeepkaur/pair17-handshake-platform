@@ -1,8 +1,8 @@
 """Tool-call reliability: detect failed calls and build one repair reprompt.
 
 The agent loop checks every model response. A malformed call, a call to an
-unknown tool, or a text answer to a request that needed a tool is reported to
-the model once with the specific error. If the next response fails again the
+unknown tool, a text answer to a request that needed a tool, or a text answer
+that promises a lookup it never makes is reported to the model once with the specific error. If the next response fails again the
 loop stops cleanly with REPAIR_FAILED_MESSAGE instead of guessing.
 """
 
@@ -45,6 +45,16 @@ _REQUEST_CUE = re.compile(
     r"\?|\b(find|show|search|list|look|get|give|tell|recommend|suggest|compare|save|which|what|any|are there)\b",
     re.IGNORECASE,
 )
+
+# A final answer cannot promise another lookup. Allow ordinary filler words
+# ("let me try searching", "I'll go ahead and check") between the promise
+# and the action verb instead of matching only one exact phrasing.
+FUTURE_ACTION_PATTERN = re.compile(
+    r"\b(?:let me(?! know)|i(?:'ll| will)|i can)\b[^.!?]{0,80}\b(?:check|search(?:ing)?|look(?:ing)?(?: up)?|find(?:ing)?|try(?:ing)?)\b",
+    re.IGNORECASE,
+)
+
+_OFFER = re.compile(r"\b(if you|would you like|do you want|want me to|like me to)\b", re.IGNORECASE)
 
 
 def clean_arguments(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -110,6 +120,16 @@ def needs_tool(user_message: str) -> bool:
     return bool(_DATA_NOUN.search(user_message) and _REQUEST_CUE.search(user_message))
 
 
+def promises_unfinished_action(content: str) -> bool:
+    """A text answer that says it will search or check instead of calling the tool."""
+
+    # "I can search other cities if you'd like" is an offer, not a promise.
+    return any(
+        FUTURE_ACTION_PATTERN.search(sentence) and not _OFFER.search(sentence)
+        for sentence in re.split(r"(?<=[.!?])\s+", content or "")
+    )
+
+
 def tool_error_reprompt(error: str) -> str:
     """Tool result sent instead of running a failed call."""
 
@@ -126,6 +146,13 @@ def text_instead_of_tool_reprompt() -> str:
         "[Runtime check] Your previous reply answered without calling a tool, but this request needs "
         "Hirely data. Call the appropriate tool now (search_jobs, get_job_details, search_events, or "
         "get_student_preferences) and answer only from its result (one retry allowed)."
+    )
+
+
+def promised_lookup_reprompt() -> str:
+    return (
+        "Do not promise a future search or check. If another lookup is needed, call the "
+        "appropriate tool now; otherwise give a complete final answer (one retry allowed)."
     )
 
 

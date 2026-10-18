@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tool-call reliability evaluation: 22 assistant turns, repair off then on.
+"""Tool-call reliability evaluation: 23 assistant turns, repair off then on.
 
 Each turn runs in a fresh conversation as a seeded student. Ordinary requests
 are mixed with ones that pressure the model into each failure mode: values
@@ -31,6 +31,7 @@ PREFS = "get_student_preferences"
 JOBS = "search_jobs"
 DETAILS = "get_job_details"
 EVENTS = "search_events"
+OPTIONS = "get_platform_options"
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,7 @@ TURNS = [
     Turn("T05", "ordinary", "Show me full-time software engineering jobs in Mountain View.", (JOBS,)),
     Turn("T06", "ordinary", "Tell me about job 24.", (DETAILS,)),
     Turn("T07", "ordinary", "Are there any career events in Menlo Park?", (EVENTS,)),
+    Turn("T23", "ordinary", "Which cities and job categories can I search on Hirely?", (OPTIONS,)),
     Turn("T08", "arguments", "Find jobs with a salary of at least ninety thousand dollars.", (JOBS,)),
     Turn("T09", "arguments", "Find internships whose application deadline is before the end of next week.", (JOBS,)),
     Turn("T10", "arguments", "Find senior-level part-time jobs at Google with 3 years of experience.", (JOBS,)),

@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from fastapi.testclient import TestClient
 
 from app.assistant.agent import resume_assistant, run_assistant
-from app.assistant.confirmation import CANCELLED_PREFIX, Decision, confirm_action
+from app.assistant.confirmation import CANCELLED_PREFIX, Decision, confirm_action, pending_action
 from app.assistant.llm_client import get_model_client
 from app.assistant.tools.schemas import AssistantContext, AssistantMessage, Message, ToolCall, ToolDefinition, ToolRegistry
 from app.database import get_db
@@ -11,8 +11,6 @@ from app.dependencies import get_current_user
 from app.main import app
 from app.models.account import Account, AccountRole
 
-from app.assistant.agent import run_assistant
-from app.assistant.confirmation import confirm_action
 
 SAVE_CALL = ToolCall(name="save_job_or_event", arguments={"item_type": "job", "item_id": 7})
 CONTEXT = AssistantContext(account_id=1, role="student")
@@ -196,3 +194,27 @@ def test_confirm_endpoint_resumes_and_rejects_when_nothing_is_pending() -> None:
     assert body["pending_action"] is None
     assert body["conversation"][2]["content"].startswith(CANCELLED_PREFIX)
     assert nothing.status_code == 409
+
+
+def test_save_actions_require_explicit_approval() -> None:
+    assert confirm_action("save_job_or_event", {"item_type": "job", "item_id": 4}) is not Decision.APPROVED
+    assert confirm_action("save_job_or_event", {"item_type": "job", "item_id": 4}, auto_approve=True) is Decision.APPROVED
+
+
+def test_agent_does_not_run_a_write_tool_before_confirmation() -> None:
+    calls = []
+
+    class Client:
+        def complete(self, *_args):
+            return AssistantMessage(tool_calls=(ToolCall(name="save_job_or_event", arguments={"item_type": "job", "item_id": 4}),))
+
+    def save(_context, arguments):
+        calls.append(arguments)
+        return "Saved."
+
+    parameters = {"type": "object", "properties": {"item_type": {"type": "string"}, "item_id": {"type": "integer"}}}
+    registry = ToolRegistry(role="student", tools=(ToolDefinition(name="save_job_or_event", description="Save.", parameters=parameters, handler=save),))
+    run = run_assistant("Save job 4", [], AssistantContext(account_id=1, role="student"), Client(), registry=registry)
+
+    assert calls == []
+    assert run.pending_action == pending_action("save_job_or_event", {"item_type": "job", "item_id": 4})
