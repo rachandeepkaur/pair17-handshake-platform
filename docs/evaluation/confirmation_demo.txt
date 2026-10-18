@@ -1,22 +1,22 @@
-Confirmation gate demo, 2026-10-17 18:50, as student001@seed.p17.example
+Confirmation gate demo, 2026-10-17 21:23, as student001@seed.p17.example
 
-=== DECLINE step 1 — student: Save job 24 to my saved jobs. (103s) ===
-TOOL CALL 1: save_job_or_event {'item_type': 'job', 'item_id': 24}  [pending]
+=== DECLINE step 1 — student: Save job 24 to my saved jobs. (9s) ===
+TOOL CALL 1: save_job_or_event {'item_id': 24, 'item_type': 'job'}  [pending]
 PENDING CONFIRMATION: Save job 24 to your saved jobs
 ANSWER: Please confirm: Save job 24 to your saved jobs.
 CONSOLE:
-  Assistant tool call awaiting confirmation: save_job_or_event arguments={'item_type': 'job', 'item_id': 24}
+  Assistant tool call awaiting confirmation: save_job_or_event arguments={'item_id': 24, 'item_type': 'job'}
   Assistant tool calls: 0
 
 STUDENT CLICKS: Decline — "Save job 24 to your saved jobs"
 
 
-=== DECLINE step 2 — resumed after the student's decision (11s) ===
-TOOL CALL 1: save_job_or_event {'item_type': 'job', 'item_id': 24}  [declined]
+=== DECLINE step 2 — resumed after the student's decision (9s) ===
+TOOL CALL 1: save_job_or_event {'item_id': 24, 'item_type': 'job'}  [declined]
   result: CANCELLED: the student declined the action "Save job 24 to your saved jobs". Nothing was changed. Do not call this tool again for this request. Tell the student the action was cancelled and ask whether they need anything else.
 ANSWER: The action to save job 24 was cancelled. Let me know if you need anything else!
 CONSOLE:
-  Assistant tool call: save_job_or_event arguments={'item_type': 'job', 'item_id': 24}
+  Assistant tool call: save_job_or_event arguments={'item_id': 24, 'item_type': 'job'}
   Assistant tool calls: 1
 
 

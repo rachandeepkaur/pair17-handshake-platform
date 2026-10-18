@@ -6,53 +6,6 @@ import { useAssistantChat } from '../../hooks/useAssistantChat'
 
 export default function ChatWidget() {
   const chat = useAssistantChat()
-  const [conversation, setConversation] = useState([])
-  const [draft, setDraft] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [toolCallCount, setToolCallCount] = useState(0)
-  const [pendingConfirmation, setPendingConfirmation] = useState(null)
-
-  async function sendMessage() {
-    const message = draft.trim()
-    if (!message || loading) return
-
-    const priorConversation = conversation
-    setConversation([...priorConversation, { role: 'user', content: message }])
-    setDraft('')
-    setError('')
-    setToolCallCount(0)
-    setLoading(true)
-
-    try {
-      const response = await sendAssistantMessage(message, priorConversation)
-      setConversation(response.conversation)
-      setToolCallCount(response.tool_call_count)
-      setPendingConfirmation(response.pending_confirmation)
-    } catch (requestError) {
-      setConversation(priorConversation)
-      setDraft(message)
-      setError(errorMessage(requestError, 'The assistant could not respond. Please try again.'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function respondToConfirmation(approved) {
-    if (!pendingConfirmation || loading) return
-    setLoading(true)
-    setError('')
-    try {
-      const response = await sendAssistantMessage(approved ? 'Yes, save it.' : 'No, do not save it.', conversation, { ...pendingConfirmation, approved })
-      setConversation(response.conversation)
-      setToolCallCount(response.tool_call_count)
-      setPendingConfirmation(null)
-    } catch (requestError) {
-      setError(errorMessage(requestError, 'The confirmation could not be processed.'))
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <Card>

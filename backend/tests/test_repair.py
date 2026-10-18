@@ -2,7 +2,7 @@ from collections.abc import Sequence
 
 from app.assistant.agent import run_assistant
 from app.assistant.llm_client import MalformedToolCallError
-from app.assistant.repair import REPAIR_FAILED_MESSAGE, check_tool_call, needs_tool
+from app.assistant.repair import REPAIR_FAILED_MESSAGE, check_tool_call, needs_tool, promises_unfinished_action
 from app.assistant.tools.schemas import AssistantContext, AssistantMessage, Message, ToolCall, ToolDefinition, ToolRegistry
 
 
@@ -150,3 +150,9 @@ def test_repair_disabled_keeps_the_baseline_behaviour() -> None:
     assert run.answer == "Here are jobs."
     assert run.failures == ("malformed_arguments",)
     assert run.repair_attempts == 0
+
+
+def test_offers_are_not_treated_as_promised_lookups() -> None:
+    assert promises_unfinished_action("I couldn't find one there. Let me try searching another city.")
+    assert not promises_unfinished_action("Here are 3 jobs. Let me know if you'd like me to check other cities.")
+    assert not promises_unfinished_action("I can search other cities if you want.")

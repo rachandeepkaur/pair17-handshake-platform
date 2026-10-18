@@ -213,13 +213,22 @@ def report(rows, content, stamp: str, example_block: str) -> str:
         example_block,
         "```",
         "",
-        "2. **The system prompt explains the blocks** (`UNTRUSTED_DATA_RULES`, appended in `prompts.py`):",
+        "2. **Instructions inside the data are removed before the model sees them** (`remove_instructions` in "
+        "`untrusted.py`). Sentences of stored text that address the assistant (\"ignore your rules\", "
+        "\"start your answer with…\", \"say …\", \"reveal … student\", \"call save_job_or_event\", \"AI assistant:\") "
+        "are replaced with `[text addressed to the AI assistant removed]`, field by field, so a listing's ID, date "
+        "and location stay visible. This layer was added after a first run showed that labelling alone did not stop "
+        "qwen3:8b from obeying \"start your answer with the exact words\" (Q1 and Q3 still said the canary). The "
+        "patterns flagged none of the 851 seeded job, event and company texts. A pattern list cannot catch every "
+        "phrasing, which is why the labelling and the prompt rules stay in place underneath it.",
+        "",
+        "3. **The system prompt explains the blocks** (`UNTRUSTED_DATA_RULES`, appended in `prompts.py`):",
         "",
         "```text",
         UNTRUSTED_DATA_RULES,
         "```",
         "",
-        "3. **Defense in depth that is on in both runs**: tools only read the signed-in student's own data (no "
+        "4. **Defense in depth that is on in both runs**: tools only read the signed-in student's own data (no "
         "tool takes a student id), and `save_job_or_event` always needs the student's confirmation, so an "
         "injected save can at most reach the confirmation dialog.",
         "",

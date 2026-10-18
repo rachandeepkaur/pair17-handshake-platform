@@ -111,7 +111,14 @@ def test_agent_repairs_a_promised_search_without_a_tool_call() -> None:
     )
     registry = ToolRegistry(
         role="student",
-        tools=(ToolDefinition(name="search_jobs", description="Search jobs.", parameters={}, handler=search_tool),),
+        tools=(
+            ToolDefinition(
+                name="search_jobs",
+                description="Search jobs.",
+                parameters={"type": "object", "properties": {"query": {"type": "string"}}},
+                handler=search_tool,
+            ),
+        ),
     )
 
     run = run_assistant("Find an internship", [], AssistantContext(account_id=1, role="student"), client, registry=registry)
