@@ -2,13 +2,19 @@
 
 Distributed Systems for Data Engineering, Pair 17: Handshake-style job and events platform with a local-LLM assistant.
 
+## Demo recording
+
+[Watch the screen-capture of our application portal](https://drive.google.com/file/d/1vRTv-ZeoXDqwvzLa70NRfP7zCFSfea87/view?usp=sharing)
+
+This Zoom recording demonstrates the application from both the student and company user perspectives.
+
 ## Pair parameters
 
 | Parameter | Value |
 |---|---|
 | PAIR | 17 |
 | PORT_BASE | 9170 (= 9000 + 17 × 10) |
-| Database / Kafka prefix | `p17` |
+| Database prefix | `p17` |
 | SEED | 17 |
 | CITY_SET | Palo Alto, Mountain View, Menlo Park |
 
@@ -26,11 +32,10 @@ Distributed Systems for Data Engineering, Pair 17: Handshake-style job and event
 ```bash
 git clone <repo-url>
 cd pair17-handshake-platform
-cp .env.example .env
 cp frontend/.env.example frontend/.env
 ```
 
-Edit `.env` with your local MySQL credentials. Pair 17 uses Palo Alto, Mountain View, and Menlo Park.
+Create a root `.env` file with your local MySQL credentials. Pair 17 uses Palo Alto, Mountain View, and Menlo Park.
 
 ### 2. Database
 
