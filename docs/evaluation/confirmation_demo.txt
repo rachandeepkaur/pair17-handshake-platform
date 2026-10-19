@@ -1,6 +1,6 @@
-Confirmation gate demo, 2026-10-17 21:23, as student001@seed.p17.example
+Confirmation gate demo, 2026-10-18 15:52, as student001@seed.p17.example
 
-=== DECLINE step 1 — student: Save job 24 to my saved jobs. (9s) ===
+=== DECLINE step 1 — student: Save job 24 to my saved jobs. (71s) ===
 TOOL CALL 1: save_job_or_event {'item_id': 24, 'item_type': 'job'}  [pending]
 PENDING CONFIRMATION: Save job 24 to your saved jobs
 ANSWER: Please confirm: Save job 24 to your saved jobs.
@@ -11,7 +11,7 @@ CONSOLE:
 STUDENT CLICKS: Decline — "Save job 24 to your saved jobs"
 
 
-=== DECLINE step 2 — resumed after the student's decision (9s) ===
+=== DECLINE step 2 — resumed after the student's decision (8s) ===
 TOOL CALL 1: save_job_or_event {'item_id': 24, 'item_type': 'job'}  [declined]
   result: CANCELLED: the student declined the action "Save job 24 to your saved jobs". Nothing was changed. Do not call this tool again for this request. Tell the student the action was cancelled and ask whether they need anything else.
 ANSWER: The action to save job 24 was cancelled. Let me know if you need anything else!
@@ -21,23 +21,23 @@ CONSOLE:
 
 
 
-=== APPROVE step 1 — student: Save job 24 to my saved jobs. (8s) ===
-TOOL CALL 1: save_job_or_event {'item_type': 'job', 'item_id': 24}  [pending]
+=== APPROVE step 1 — student: Save job 24 to my saved jobs. (7s) ===
+TOOL CALL 1: save_job_or_event {'item_id': 24, 'item_type': 'job'}  [pending]
 PENDING CONFIRMATION: Save job 24 to your saved jobs
 ANSWER: Please confirm: Save job 24 to your saved jobs.
 CONSOLE:
-  Assistant tool call awaiting confirmation: save_job_or_event arguments={'item_type': 'job', 'item_id': 24}
+  Assistant tool call awaiting confirmation: save_job_or_event arguments={'item_id': 24, 'item_type': 'job'}
   Assistant tool calls: 0
 
 STUDENT CLICKS: Approve — "Save job 24 to your saved jobs"
 
 
-=== APPROVE step 2 — resumed after the student's decision (10s) ===
-TOOL CALL 1: save_job_or_event {'item_type': 'job', 'item_id': 24}  [ok]
+=== APPROVE step 2 — resumed after the student's decision (8s) ===
+TOOL CALL 1: save_job_or_event {'item_id': 24, 'item_type': 'job'}  [ok]
   result: Saved job 24 for this student.
 ANSWER: Job 24 has been successfully saved to your saved jobs list. Let me know if you need further assistance!
 CONSOLE:
-  Assistant tool call: save_job_or_event arguments={'item_type': 'job', 'item_id': 24}
+  Assistant tool call: save_job_or_event arguments={'item_id': 24, 'item_type': 'job'}
   Assistant tool calls: 1
 
 
