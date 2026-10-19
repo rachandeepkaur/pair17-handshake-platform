@@ -1,0 +1,1673 @@
+{
+  "info": {
+    "name": "Handshake Platform API (Pair 17)",
+    "description": "REST API for the student/company recruiting platform. Authorize with the `access_token` from `POST /auth/login` as a Bearer token.\n\nRun **auth > Login** first; its test script stores `access_token` in the `token` collection variable.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9170"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "assistant",
+      "item": [
+        {
+          "name": "Send a message to the assistant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assistant/chat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assistant",
+                "chat"
+              ]
+            },
+            "description": "Send a message to the assistant",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"string\",\n  \"conversation\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"\",\n      \"tool_name\": \"string\",\n      \"tool_calls\": [\n        {\n          \"name\": \"string\",\n          \"arguments\": {},\n          \"index\": 1\n        }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Approve or decline the action the assistant is waiting on",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assistant/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assistant",
+                "confirm"
+              ]
+            },
+            "description": "Approve or decline the action the assistant is waiting on",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversation\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"\",\n      \"tool_name\": \"string\",\n      \"tool_calls\": [\n        {\n          \"name\": \"string\",\n          \"arguments\": {},\n          \"index\": 1\n        }\n      ]\n    }\n  ],\n  \"approved\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "auth",
+      "item": [
+        {
+          "name": "Signup Company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/signup/company",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "signup",
+                "company"
+              ]
+            },
+            "description": "Signup Company",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_name\": \"string\",\n  \"email\": \"user@example.com\",\n  \"password\": \"string\",\n  \"location\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"string\",\n  \"password\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.access_token) { pm.collectionVariables.set('token', body.access_token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change the signed-in account's password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            },
+            "description": "Change the signed-in account's password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"string\",\n  \"new_password\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "student authentication",
+      "item": [
+        {
+          "name": "Signup Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/signup/student",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "signup",
+                "student"
+              ]
+            },
+            "description": "Create a student login and its required initial profile together.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"email\": \"string\",\n  \"password\": \"string\",\n  \"college_name\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "student profile",
+      "item": [
+        {
+          "name": "Get the signed-in student's profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/students/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "students",
+                "me"
+              ]
+            },
+            "description": "Get the signed-in student's profile"
+          }
+        },
+        {
+          "name": "Update the signed-in student's profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/students/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "students",
+                "me"
+              ]
+            },
+            "description": "Update the signed-in student's profile",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"email\": \"user@example.com\",\n  \"college_name\": \"string\",\n  \"date_of_birth\": \"2026-11-01\",\n  \"city\": \"string\",\n  \"state\": \"string\",\n  \"country\": \"string\",\n  \"career_objective\": \"string\",\n  \"degree\": \"string\",\n  \"major\": \"string\",\n  \"graduation_year\": 1,\n  \"cgpa\": 1.0,\n  \"experience\": \"string\",\n  \"phone\": \"string\",\n  \"skills\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Upload the signed-in student's profile picture",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/students/me/picture",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "students",
+                "me",
+                "picture"
+              ]
+            },
+            "description": "Upload the signed-in student's profile picture",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "student preferences",
+      "item": [
+        {
+          "name": "Get Preferences",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/student/preferences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student",
+                "preferences"
+              ]
+            },
+            "description": "Get Preferences"
+          }
+        },
+        {
+          "name": "Update Preferences",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/student/preferences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student",
+                "preferences"
+              ]
+            },
+            "description": "Update Preferences",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"preferred_categories\": \"string\",\n  \"preferred_cities\": \"string\",\n  \"min_salary\": 1.0,\n  \"preferred_skills\": \"string\",\n  \"remote_ok\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "student jobs",
+      "item": [
+        {
+          "name": "Search active jobs for students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/student/jobs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student",
+                "jobs"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "string",
+                  "disabled": true
+                },
+                {
+                  "key": "category",
+                  "value": "string",
+                  "disabled": true
+                },
+                {
+                  "key": "city",
+                  "value": "string",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Search active jobs for students"
+          }
+        },
+        {
+          "name": "View an active job for students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/student/jobs/:job_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student",
+                "jobs",
+                ":job_id"
+              ],
+              "variable": [
+                {
+                  "key": "job_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "View an active job for students"
+          }
+        }
+      ]
+    },
+    {
+      "name": "student applications",
+      "item": [
+        {
+          "name": "Apply To Job",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/student/jobs/:job_id/apply",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student",
+                "jobs",
+                ":job_id",
+                "apply"
+              ],
+              "variable": [
+                {
+                  "key": "job_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Apply To Job",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "resume",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List My Applications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/student/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student",
+                "applications"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "Pending",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List My Applications"
+          }
+        }
+      ]
+    },
+    {
+      "name": "student events",
+      "item": [
+        {
+          "name": "List Student Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/student/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "string",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List Student Events"
+          }
+        },
+        {
+          "name": "List My Registrations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/student/events/registrations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student",
+                "events",
+                "registrations"
+              ]
+            },
+            "description": "List My Registrations"
+          }
+        },
+        {
+          "name": "Register For Event",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/student/events/:event_id/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student",
+                "events",
+                ":event_id",
+                "register"
+              ],
+              "variable": [
+                {
+                  "key": "event_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Register For Event"
+          }
+        },
+        {
+          "name": "Get Student Event",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/student/events/:event_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "student",
+                "events",
+                ":event_id"
+              ],
+              "variable": [
+                {
+                  "key": "event_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Get Student Event"
+          }
+        }
+      ]
+    },
+    {
+      "name": "companies",
+      "item": [
+        {
+          "name": "Get your company's profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "me"
+              ]
+            },
+            "description": "Get your company's profile"
+          }
+        },
+        {
+          "name": "Update the company profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/companies/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "me"
+              ]
+            },
+            "description": "Update the company profile",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_name\": \"string\",\n  \"location\": \"string\",\n  \"description\": \"string\",\n  \"contact_info\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Upload a profile picture (JPEG, PNG, or WebP, max 2 MB)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/me/picture",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "me",
+                "picture"
+              ]
+            },
+            "description": "Upload a profile picture (JPEG, PNG, or WebP, max 2 MB)",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "jobs",
+      "item": [
+        {
+          "name": "Post a new job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/jobs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jobs"
+              ]
+            },
+            "description": "Post a new job",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"string\",\n  \"description\": \"string\",\n  \"category\": \"string\",\n  \"city\": \"string\",\n  \"location\": \"string\",\n  \"is_remote\": false,\n  \"salary\": 1.0,\n  \"skills_required\": \"string\",\n  \"posting_date\": \"2026-11-01\",\n  \"deadline\": \"2026-11-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List the company's own job postings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jobs/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jobs",
+                "mine"
+              ]
+            },
+            "description": "List the company's own job postings"
+          }
+        },
+        {
+          "name": "Get one of the company's job postings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jobs/:job_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jobs",
+                ":job_id"
+              ],
+              "variable": [
+                {
+                  "key": "job_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Get one of the company's job postings"
+          }
+        },
+        {
+          "name": "List students who applied to one of the company's jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jobs/:job_id/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jobs",
+                ":job_id",
+                "applications"
+              ],
+              "variable": [
+                {
+                  "key": "job_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "Pending",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List students who applied to one of the company's jobs"
+          }
+        }
+      ]
+    },
+    {
+      "name": "applications",
+      "item": [
+        {
+          "name": "List all applications to the company's jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/applications/company",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "company"
+              ],
+              "query": [
+                {
+                  "key": "job_id",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "student_id",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "Pending",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all applications to the company's jobs"
+          }
+        },
+        {
+          "name": "Get one application with the applicant's full profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/applications/:application_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                ":application_id"
+              ],
+              "variable": [
+                {
+                  "key": "application_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Get one application with the applicant's full profile"
+          }
+        },
+        {
+          "name": "Set an application's status to Pending, Reviewed, or Declined",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications/:application_id/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                ":application_id",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "application_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Set an application's status to Pending, Reviewed, or Declined",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Pending\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Stream the applicant's PDF resume for inline preview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/applications/:application_id/resume",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                ":application_id",
+                "resume"
+              ],
+              "variable": [
+                {
+                  "key": "application_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Stream the applicant's PDF resume for inline preview"
+          }
+        }
+      ]
+    },
+    {
+      "name": "events",
+      "item": [
+        {
+          "name": "Post a new event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "events"
+              ]
+            },
+            "description": "Post a new event",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"description\": \"string\",\n  \"event_date\": \"2026-11-01\",\n  \"event_time\": \"string\",\n  \"location\": \"string\",\n  \"eligibility\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List the company's own events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "events",
+                "mine"
+              ]
+            },
+            "description": "List the company's own events"
+          }
+        },
+        {
+          "name": "Get one of the company's events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/:event_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "events",
+                ":event_id"
+              ],
+              "variable": [
+                {
+                  "key": "event_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Get one of the company's events"
+          }
+        },
+        {
+          "name": "List students registered for one of the company's events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/:event_id/registrations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "events",
+                ":event_id",
+                "registrations"
+              ],
+              "variable": [
+                {
+                  "key": "event_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "List students registered for one of the company's events"
+          }
+        }
+      ]
+    },
+    {
+      "name": "students",
+      "item": [
+        {
+          "name": "Search students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/students",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "students"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "string",
+                  "disabled": true
+                },
+                {
+                  "key": "college",
+                  "value": "string",
+                  "disabled": true
+                },
+                {
+                  "key": "skills",
+                  "value": "string",
+                  "disabled": true
+                },
+                {
+                  "key": "major",
+                  "value": "string",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Search students"
+          }
+        },
+        {
+          "name": "View a student's profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/students/:student_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "students",
+                ":student_id"
+              ],
+              "variable": [
+                {
+                  "key": "student_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "View a student's profile"
+          }
+        }
+      ]
+    },
+    {
+      "name": "messages",
+      "item": [
+        {
+          "name": "List your conversations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messages/conversations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messages",
+                "conversations"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "string",
+                  "disabled": true
+                },
+                {
+                  "key": "unread_only",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List your conversations"
+          }
+        },
+        {
+          "name": "Open (or reuse) the conversation with a student \u2014 companies only",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messages/conversations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messages",
+                "conversations"
+              ]
+            },
+            "description": "Open (or reuse) the conversation with a student \u2014 companies only",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get a conversation with all its messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messages/conversations/:conversation_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messages",
+                "conversations",
+                ":conversation_id"
+              ],
+              "variable": [
+                {
+                  "key": "conversation_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Get a conversation with all its messages"
+          }
+        },
+        {
+          "name": "Send a message; companies may attach one of their jobs or events",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messages/conversations/:conversation_id/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messages",
+                "conversations",
+                ":conversation_id",
+                "messages"
+              ],
+              "variable": [
+                {
+                  "key": "conversation_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Send a message; companies may attach one of their jobs or events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"string\",\n  \"job_id\": 1,\n  \"event_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Mark the other side's messages in this conversation as read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messages/conversations/:conversation_id/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messages",
+                "conversations",
+                ":conversation_id",
+                "read"
+              ],
+              "variable": [
+                {
+                  "key": "conversation_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Mark the other side's messages in this conversation as read"
+          }
+        }
+      ]
+    },
+    {
+      "name": "team",
+      "item": [
+        {
+          "name": "Your own name, role, and permissions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/team/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "team",
+                "me"
+              ]
+            },
+            "description": "Your own name, role, and permissions"
+          }
+        },
+        {
+          "name": "Update your display name",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/team/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "team",
+                "me"
+              ]
+            },
+            "description": "Update your display name",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Roles and what each can do",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/team/permissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "team",
+                "permissions"
+              ]
+            },
+            "description": "Roles and what each can do"
+          }
+        },
+        {
+          "name": "List teammates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/team/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "team",
+                "members"
+              ]
+            },
+            "description": "List teammates"
+          }
+        },
+        {
+          "name": "Change a teammate's role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/team/members/:member_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "team",
+                "members",
+                ":member_id"
+              ],
+              "variable": [
+                {
+                  "key": "member_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Change a teammate's role",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Remove a teammate (deletes their login)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/team/members/:member_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "team",
+                "members",
+                ":member_id"
+              ],
+              "variable": [
+                {
+                  "key": "member_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Remove a teammate (deletes their login)"
+          }
+        },
+        {
+          "name": "List pending invitations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/team/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "team",
+                "invitations"
+              ]
+            },
+            "description": "List pending invitations"
+          }
+        },
+        {
+          "name": "Invite a teammate; the response carries the one-time invite token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/team/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "team",
+                "invitations"
+              ]
+            },
+            "description": "Invite a teammate; the response carries the one-time invite token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"string\",\n  \"name\": \"string\",\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Issue a new invite link (the old one stops working) and reset the expiry",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/team/invitations/:invitation_id/regenerate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "team",
+                "invitations",
+                ":invitation_id",
+                "regenerate"
+              ],
+              "variable": [
+                {
+                  "key": "invitation_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Issue a new invite link (the old one stops working) and reset the expiry"
+          }
+        },
+        {
+          "name": "Revoke an invitation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/team/invitations/:invitation_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "team",
+                "invitations",
+                ":invitation_id"
+              ],
+              "variable": [
+                {
+                  "key": "invitation_id",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Revoke an invitation"
+          }
+        },
+        {
+          "name": "Preview an invitation from its link (no auth)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/team/invitations/token/:token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "team",
+                "invitations",
+                "token",
+                ":token"
+              ],
+              "variable": [
+                {
+                  "key": "token",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Preview an invitation from its link (no auth)",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Accept an invitation: creates the login and signs in (no auth)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/team/invitations/token/:token/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "team",
+                "invitations",
+                "token",
+                ":token",
+                "accept"
+              ],
+              "variable": [
+                {
+                  "key": "token",
+                  "value": "1",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Accept an invitation: creates the login and signs in (no auth)",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"password\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "dashboards",
+      "item": [
+        {
+          "name": "Company dashboard summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboards/company",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboards",
+                "company"
+              ]
+            },
+            "description": "Company dashboard summary"
+          }
+        }
+      ]
+    }
+  ]
+}
