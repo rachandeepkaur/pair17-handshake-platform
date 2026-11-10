@@ -211,3 +211,19 @@ CREATE TABLE conversations (
   UNIQUE KEY uq_conversation_pair (company_id, student_id),
   INDEX idx_conversations_recent (company_id, last_message_at)
 ) ENGINE=InnoDB;
+
+CREATE TABLE messages (
+  id                 INT AUTO_INCREMENT PRIMARY KEY,
+  conversation_id    INT NOT NULL,
+  sender_account_id  INT NULL,
+  body               TEXT NOT NULL,
+  job_id             INT NULL,
+  event_id           INT NULL,
+  created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  read_at            TIMESTAMP NULL,
+  FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+  FOREIGN KEY (sender_account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+  FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE SET NULL,
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE SET NULL,
+  INDEX idx_messages_conversation (conversation_id, created_at)
+) ENGINE=InnoDB;

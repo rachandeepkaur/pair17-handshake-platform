@@ -1,0 +1,3 @@
+-r requirements-base.txt
+# HTTP client for the Ollama /api/chat endpoint.
+httpx==0.27.2

@@ -34,6 +34,26 @@ class Settings(BaseSettings):
     # Tool schemas + system prompt take ~1.2k tokens; 8k leaves room for follow-ups.
     ollama_num_ctx: int = 8192
 
+    # Containerized deployment (Lab 2). Defaults keep the local monolith working.
+    service_name: str = "monolith"
+    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:9170"
+    # Empty means "not configured": the health check skips that dependency.
+    mongo_uri: str = ""
+    mongo_db: str = "p17_handshake"
+    kafka_bootstrap_servers: str = ""
+    # Platform services the assistant depends on, as "name=url" pairs separated by commas.
+    platform_service_urls: str = ""
+    health_timeout_seconds: float = 2.0
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def platform_services(self) -> dict[str, str]:
+        pairs = (item.split("=", 1) for item in self.platform_service_urls.split(",") if "=" in item)
+        return {name.strip(): url.strip().rstrip("/") for name, url in pairs if name.strip() and url.strip()}
+
     @property
     def database_url(self) -> str:
         return (

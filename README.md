@@ -99,6 +99,46 @@ ollama pull qwen3:8b        # default; use llama3-groq-tool-use:8b or qwen3:4b a
 ollama serve
 ```
 
+## Docker deployment (Lab 2)
+
+The API runs as six services built from the shared `backend/app` code. Each service
+has its own Dockerfile in `backend/docker/<service>/`, installs only its own
+requirements, and mounts only its routers (`backend/app/entrypoints/`).
+
+| Container | Image | Host port | Owns |
+|---|---|---|---|
+| `p17-frontend` | `p17-frontend` | 9170 | React build + nginx gateway (`/api/*` → services) |
+| `p17-student-service` | `p17-student-service` | 9171 | `/auth/signup/student`, `/students`, `/student/preferences`, profile pictures |
+| `p17-company-service` | `p17-company-service` | 9172 | `/auth/login`, `/auth/signup/company`, `/companies`, `/team`, `/messages`, `/dashboards` |
+| `p17-job-service` | `p17-job-service` | 9173 | `/jobs`, `/student/jobs` |
+| `p17-application-service` | `p17-application-service` | 9174 | `/applications`, `/student/jobs/{id}/apply`, `/student/applications` |
+| `p17-event-service` | `p17-event-service` | 9175 | `/events`, `/student/events` |
+| `p17-assistant-service` | `p17-assistant-service` | 9176 | `/assistant` (uses Ollama on the host) |
+| `p17-mongodb` | `mongo:7.0` | 9177 | MongoDB |
+| `p17-mysql` | `mysql:8.0` | 9178 | MySQL (Lab 1 system of record, schema loaded on first start) |
+| `p17-kafka` | `apache/kafka:3.8.0` | 9179 | Kafka, single-node KRaft (`p17-kafka:9092` inside the network) |
+
+Every service exposes `GET /health/live` (process up) and `GET /health` (200 only when
+MySQL, MongoDB, and Kafka are reachable, 503 otherwise). The Docker `HEALTHCHECK` and
+compose `depends_on: service_healthy` use `/health`. The assistant's `/health` also reports
+Ollama and the other platform services. Through the gateway, use
+`http://localhost:9170/api/health/<service>`.
+
+```bash
+ollama serve                                         # on the host, model qwen3:8b pulled
+docker compose up -d --build --wait                  # build p17-* images, start all containers
+docker compose --profile seed run --rm p17-db-seed   # load demo data (first run only)
+scripts/verify_local.sh                              # health, routing, MongoDB, assistant checks
+scripts/verify_local.sh --chat --failover            # + one real assistant turn, + MongoDB outage test
+```
+
+App: http://localhost:9170 (sign in as `student001@seed.p17.example` / `SeedPass17!`).
+Swagger for each service: `http://localhost:917N/docs`.
+`docker compose down` stops everything. `docker compose down -v` also deletes the data volumes.
+
+Optional overrides in the root `.env`: `P17_DB_PASSWORD`, `P17_MYSQL_ROOT_PASSWORD`,
+`P17_MONGO_PASSWORD`, `JWT_SECRET`, `OLLAMA_MODEL`, `P17_OLLAMA_HOST`.
+
 ## Running tests
 
 ```bash

@@ -1,0 +1,3 @@
+-r requirements-base.txt
+# Company logo uploads (multipart/form-data).
+python-multipart==0.0.9

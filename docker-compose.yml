@@ -1,0 +1,295 @@
+# Pair 17 Handshake platform: six backend services, web gateway, MySQL, MongoDB, Kafka.
+#
+#   docker compose up -d --build                         # start everything
+#   docker compose --profile seed run --rm p17-db-seed   # load demo data (once)
+#   docker compose ps                                    # health status
+#
+# Host ports (PORT_BASE 9170): web 9170, services 9171-9176, MongoDB 9177, MySQL 9178, Kafka 9179.
+# Secrets below have local-only defaults; override them in the root .env.
+
+name: p17-handshake
+
+x-backend-env: &backend-env
+  PAIR: "17"
+  PORT_BASE: "9170"
+  DB_PREFIX: p17
+  SEED: "17"
+  CITY_SET: ${CITY_SET:-Palo Alto,Mountain View,Menlo Park}
+  # MySQL remains the Lab 1 system of record.
+  DB_HOST: p17-mysql
+  DB_PORT: "3306"
+  DB_NAME: p17_handshake
+  DB_USER: p17_app
+  DB_PASSWORD: ${P17_DB_PASSWORD:-p17_app_pass}
+  MONGO_URI: mongodb://p17_admin:${P17_MONGO_PASSWORD:-p17_mongo_pass}@p17-mongodb:27017/?authSource=admin
+  MONGO_DB: p17_handshake
+  KAFKA_BOOTSTRAP_SERVERS: p17-kafka:9092
+  JWT_SECRET: ${JWT_SECRET:-data260Lab1}
+  JWT_ALGORITHM: HS256
+  JWT_EXPIRE_MINUTES: "60"
+  CORS_ORIGINS: http://localhost:9170,http://localhost:5173,http://localhost:5174
+
+x-backend-depends: &backend-depends
+  p17-mysql:
+    condition: service_healthy
+  p17-mongodb:
+    condition: service_healthy
+  p17-kafka:
+    condition: service_healthy
+
+services:
+  # ---------------------------------------------------------------- data tier
+  p17-mysql:
+    image: mysql:8.0
+    container_name: p17-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${P17_MYSQL_ROOT_PASSWORD:-p17_root_pass}
+      MYSQL_DATABASE: p17_handshake
+      MYSQL_USER: p17_app
+      MYSQL_PASSWORD: ${P17_DB_PASSWORD:-p17_app_pass}
+    volumes:
+      - p17-mysql-data:/var/lib/mysql
+      # Runs only when the data volume is empty (first start).
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "9178:3306"
+    networks: [p17-handshake-net]
+    healthcheck:
+      # TCP on 127.0.0.1 stays closed while the init scripts run, so "healthy" means schema loaded.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  p17-mongodb:
+    image: mongo:7.0
+    container_name: p17-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: p17_admin
+      MONGO_INITDB_ROOT_PASSWORD: ${P17_MONGO_PASSWORD:-p17_mongo_pass}
+      MONGO_INITDB_DATABASE: p17_handshake
+    volumes:
+      - p17-mongo-data:/data/db
+    ports:
+      - "9177:27017"
+    networks: [p17-handshake-net]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand('ping').ok ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  p17-kafka:
+    image: apache/kafka:3.8.0
+    container_name: p17-kafka
+    environment:
+      # Single-node KRaft cluster (no ZooKeeper).
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@p17-kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # PLAINTEXT for containers on p17-handshake-net, EXTERNAL for clients on the host.
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://p17-kafka:9092,EXTERNAL://localhost:9179
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - p17-kafka-data:/var/lib/kafka/data
+    ports:
+      - "9179:9094"
+    networks: [p17-handshake-net]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------- backend services
+  p17-student-service:
+    build:
+      context: ./backend
+      dockerfile: docker/student/Dockerfile
+    image: p17-student-service:latest
+    container_name: p17-student-service
+    environment:
+      <<: *backend-env
+      SERVICE_NAME: student
+      PORT: "9171"
+    volumes:
+      - p17-uploads:/app/uploads
+    ports:
+      - "9171:9171"
+    networks: [p17-handshake-net]
+    depends_on: *backend-depends
+    restart: unless-stopped
+
+  p17-company-service:
+    build:
+      context: ./backend
+      dockerfile: docker/company/Dockerfile
+    image: p17-company-service:latest
+    container_name: p17-company-service
+    environment:
+      <<: *backend-env
+      SERVICE_NAME: company
+      PORT: "9172"
+    volumes:
+      - p17-uploads:/app/uploads
+    ports:
+      - "9172:9172"
+    networks: [p17-handshake-net]
+    depends_on: *backend-depends
+    restart: unless-stopped
+
+  p17-job-service:
+    build:
+      context: ./backend
+      dockerfile: docker/job/Dockerfile
+    image: p17-job-service:latest
+    container_name: p17-job-service
+    environment:
+      <<: *backend-env
+      SERVICE_NAME: job
+      PORT: "9173"
+    ports:
+      - "9173:9173"
+    networks: [p17-handshake-net]
+    depends_on: *backend-depends
+    restart: unless-stopped
+
+  p17-application-service:
+    build:
+      context: ./backend
+      dockerfile: docker/application/Dockerfile
+    image: p17-application-service:latest
+    container_name: p17-application-service
+    environment:
+      <<: *backend-env
+      SERVICE_NAME: application
+      PORT: "9174"
+    volumes:
+      - p17-uploads:/app/uploads
+    ports:
+      - "9174:9174"
+    networks: [p17-handshake-net]
+    depends_on: *backend-depends
+    restart: unless-stopped
+
+  p17-event-service:
+    build:
+      context: ./backend
+      dockerfile: docker/event/Dockerfile
+    image: p17-event-service:latest
+    container_name: p17-event-service
+    environment:
+      <<: *backend-env
+      SERVICE_NAME: event
+      PORT: "9175"
+    ports:
+      - "9175:9175"
+    networks: [p17-handshake-net]
+    depends_on: *backend-depends
+    restart: unless-stopped
+
+  p17-assistant-service:
+    build:
+      context: ./backend
+      dockerfile: docker/assistant/Dockerfile
+    image: p17-assistant-service:latest
+    container_name: p17-assistant-service
+    environment:
+      <<: *backend-env
+      SERVICE_NAME: assistant
+      PORT: "9176"
+      # Ollama runs on the host (Metal/GPU acceleration); override to point elsewhere.
+      OLLAMA_HOST: ${P17_OLLAMA_HOST:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
+      # Reported by GET /health so the assistant's reach to the platform is visible.
+      PLATFORM_SERVICE_URLS: >-
+        student=http://p17-student-service:9171,job=http://p17-job-service:9173,event=http://p17-event-service:9175,application=http://p17-application-service:9174,company=http://p17-company-service:9172
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "9176:9176"
+    networks: [p17-handshake-net]
+    depends_on:
+      <<: *backend-depends
+      p17-student-service:
+        condition: service_healthy
+      p17-job-service:
+        condition: service_healthy
+      p17-event-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # -------------------------------------------------------------- web gateway
+  p17-frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    image: p17-frontend:latest
+    container_name: p17-frontend
+    ports:
+      - "9170:80"
+    networks: [p17-handshake-net]
+    depends_on:
+      p17-student-service:
+        condition: service_healthy
+      p17-company-service:
+        condition: service_healthy
+      p17-job-service:
+        condition: service_healthy
+      p17-application-service:
+        condition: service_healthy
+      p17-event-service:
+        condition: service_healthy
+      p17-assistant-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ------------------------------------------------------- one-shot seed job
+  p17-db-seed:
+    profiles: [seed]
+    build:
+      context: ./backend
+      dockerfile: docker/seed/Dockerfile
+    image: p17-db-seed:latest
+    container_name: p17-db-seed
+    environment: *backend-env
+    networks: [p17-handshake-net]
+    depends_on:
+      p17-mysql:
+        condition: service_healthy
+
+networks:
+  # One user-defined bridge: containers resolve each other by container name.
+  # (A separate frontend/data network split was tried, but Docker Desktop's published
+  # ports intermittently stop answering for containers attached to two networks.)
+  p17-handshake-net:
+    name: p17-handshake-net
+    driver: bridge
+
+volumes:
+  p17-mysql-data:
+    name: p17-mysql-data
+  p17-mongo-data:
+    name: p17-mongo-data
+  p17-kafka-data:
+    name: p17-kafka-data
+  p17-uploads:
+    name: p17-uploads
