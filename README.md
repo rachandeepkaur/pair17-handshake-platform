@@ -124,17 +124,58 @@ compose `depends_on: service_healthy` use `/health`. The assistant's `/health` a
 Ollama and the other platform services. Through the gateway, use
 `http://localhost:9170/api/health/<service>`.
 
+### Run the stack
+
+Prerequisites: Docker Desktop running, and Ollama on the host (`ollama serve`, with
+`qwen3:8b` pulled) for the assistant. Run every command from the repository root.
+
+**Build** the seven `p17-*` images (six services and the frontend):
+
 ```bash
-ollama serve                                         # on the host, model qwen3:8b pulled
-docker compose up -d --build --wait                  # build p17-* images, start all containers
-docker compose --profile seed run --rm p17-db-seed   # load demo data (first run only)
-scripts/verify_local.sh                              # health, routing, MongoDB, assistant checks
-scripts/verify_local.sh --chat --failover            # + one real assistant turn, + MongoDB outage test
+docker compose build                       # all images
+docker compose build p17-job-service       # one service after a code change
+docker images "p17-*"                      # list the built images
 ```
 
+**Start** the stack and load demo data:
+
+```bash
+docker compose up -d --wait                          # start; returns once every container is healthy
+docker compose --profile seed run --rm p17-db-seed   # first run only: 50 companies, 200 students, 300 jobs
+```
+
+`docker compose up -d --build --wait` builds and starts in one step.
 App: http://localhost:9170 (sign in as `student001@seed.p17.example` / `SeedPass17!`).
-Swagger for each service: `http://localhost:917N/docs`.
-`docker compose down` stops everything. `docker compose down -v` also deletes the data volumes.
+Swagger for each service: `http://localhost:917N/docs` (N = 1 to 6).
+
+**Inspect** the running stack:
+
+```bash
+docker compose ps                                    # status and health of every container
+docker compose logs -f p17-assistant-service         # follow one service's logs
+docker compose logs --tail 50                        # recent logs from all containers
+curl -s http://localhost:9170/api/health/assistant   # a service's /health through the gateway
+curl -s http://localhost:9173/health                 # a service's /health on its own port
+docker inspect --format '{{json .State.Health}}' p17-job-service   # Docker health-check history
+docker network inspect p17-handshake-net             # containers attached to the network
+docker compose exec p17-mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" p17_handshake -e "SHOW TABLES"'
+docker compose exec p17-mongodb mongosh -u p17_admin -p p17_mongo_pass --quiet --eval 'db.adminCommand("ping")'
+```
+
+**Verify** frontend → backend, backend → databases, and assistant → platform services:
+
+```bash
+scripts/verify_local.sh                    # health, gateway routing, MySQL and MongoDB, assistant reach
+scripts/verify_local.sh --chat --failover  # + one real assistant turn, + MongoDB outage and recovery
+```
+
+**Stop** the stack:
+
+```bash
+docker compose stop                        # stop containers, keep them and their data
+docker compose down                        # remove containers and network, keep data volumes
+docker compose --profile seed down -v      # also delete the MySQL, MongoDB, Kafka, and upload volumes
+```
 
 Optional overrides in the root `.env`: `P17_DB_PASSWORD`, `P17_MYSQL_ROOT_PASSWORD`,
 `P17_MONGO_PASSWORD`, `JWT_SECRET`, `OLLAMA_MODEL`, `P17_OLLAMA_HOST`.

@@ -76,7 +76,16 @@ expect 200 "company team           -> company service"     "${C[@]}" "$WEB/api/t
 expect 401 "unauthenticated request is rejected"                     "$WEB/api/student/jobs"
 expect 404 "unknown /api path is not routed"                         "$WEB/api/nope"
 
-section "4. Backend services reach MongoDB (ping from inside each container)"
+section "4. Backend services reach their databases (from inside each container)"
+for entry in "${SERVICES[@]}"; do
+  svc=${entry%%:*}
+  if out=$(docker exec "p17-$svc-service" python -c "
+from sqlalchemy import text; from app.database import engine
+with engine.connect() as c:
+    print(c.execute(text('SELECT VERSION()')).scalar(), c.execute(text('SELECT COUNT(*) FROM jobs')).scalar())" 2>&1); then
+    pass "p17-$svc-service -> p17-mysql (MySQL ${out% *}, jobs table rows=${out##* })"
+  else fail "p17-$svc-service -> p17-mysql: ${out:0:200}"; fi
+done
 for entry in "${SERVICES[@]}"; do
   svc=${entry%%:*}
   if out=$(docker exec "p17-$svc-service" python -c "
@@ -110,6 +119,10 @@ import json, sys
 d = json.load(sys.stdin)
 print(f\"       tool_call_count={d['tool_call_count']}\")
 print('       answer: ' + d['answer'][:400].replace(chr(10), chr(10) + '               '))"
+  # A 200 with zero tool calls means the model never ran (e.g. Ollama is down).
+  calls=$(echo "$BODY" | json "d['tool_call_count']")
+  if [[ $calls =~ ^[1-9] ]]; then pass "assistant called $calls platform tool(s) and answered"
+  else fail "assistant made no tool calls (is Ollama running on the host?)"; fi
 fi
 
 if $RUN_FAILOVER; then
