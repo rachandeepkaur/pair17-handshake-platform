@@ -14,6 +14,7 @@ from app.schemas.assistant import (
     AssistantConfirmRequest,
     AssistantConversationMessage,
     AssistantPendingAction,
+    AssistantTokenUsage,
 )
 
 
@@ -66,4 +67,5 @@ def _response(run: AssistantRun) -> AssistantChatResponse:
         tool_call_count=run.tool_call_count,
         stopped_at_iteration_limit=run.stopped_at_iteration_limit,
         pending_action=AssistantPendingAction(**asdict(run.pending_action)) if run.pending_action else None,
+        token_usage=AssistantTokenUsage(**asdict(run.token_usage)),
     )

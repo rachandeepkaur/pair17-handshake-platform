@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../app/hooks'
-import { ASSISTANT_STORAGE_KEY, conversationCleared, conversationSet, selectConversation } from '../features/assistant/assistantSlice'
+import { ASSISTANT_STORAGE_KEY, conversationCleared, conversationSet, selectConversation, selectTokenUsage, tokenUsageSet } from '../features/assistant/assistantSlice'
 import { errorMessage } from '../services/api'
 import { confirmAssistantAction, sendAssistantMessage } from '../services/assistantService'
 
@@ -28,6 +28,7 @@ export function pendingActionFrom(conversation) {
 export function useAssistantChat() {
   const dispatch = useAppDispatch()
   const conversation = useAppSelector(selectConversation)
+  const tokenUsage = useAppSelector(selectTokenUsage)
   const [draft, setDraft] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -53,6 +54,7 @@ export function useAssistantChat() {
       try {
         const response = await sendAssistantMessage(message, prior)
         dispatch(conversationSet(response.conversation))
+        dispatch(tokenUsageSet(response.token_usage))
       } catch (requestError) {
         dispatch(conversationSet(prior))
         setDraft(message)
@@ -74,6 +76,7 @@ export function useAssistantChat() {
       try {
         const response = await confirmAssistantAction(conversation, approved)
         dispatch(conversationSet(response.conversation))
+        dispatch(tokenUsageSet(response.token_usage))
       } catch (requestError) {
         setError(errorMessage(requestError, 'The assistant could not continue. Please try again.'))
       } finally {
@@ -89,7 +92,7 @@ export function useAssistantChat() {
     setError('')
   }, [dispatch])
 
-  return { conversation, draft, setDraft, loading, error, send, reset, pendingAction, decide }
+  return { conversation, draft, setDraft, loading, error, send, reset, pendingAction, decide, tokenUsage }
 }
 
 function resultStatus(content) {

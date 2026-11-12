@@ -12,7 +12,7 @@ stops at a final answer or after `max_iterations` model calls. Part C adds:
 """
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from app.assistant.confirmation import (
@@ -40,8 +40,9 @@ from app.assistant.repair import (
     tool_error_reprompt,
     unparsable_call_reprompt,
 )
-from app.assistant.tools.schemas import AssistantContext, Message, ToolCall, ToolRegistry, message_history
+from app.assistant.tools.schemas import AssistantContext, AssistantMessage, Message, ToolCall, ToolRegistry, message_history
 from app.assistant.untrusted import wrap_untrusted
+from app.config import settings
 
 
 MAX_ASSISTANT_ITERATIONS = 5
@@ -68,6 +69,15 @@ class ToolCallRecord:
 
 
 @dataclass(frozen=True)
+class TokenUsage:
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    context_percentage: float = 0
+    inference_calls: int = 0
+
+
+@dataclass(frozen=True)
 class AssistantRun:
     """The final answer and the updated, caller-owned conversation history."""
 
@@ -80,6 +90,7 @@ class AssistantRun:
     failures: tuple[str, ...] = ()
     repair_attempts: int = 0
     stopped_after_failed_repair: bool = False
+    token_usage: TokenUsage = field(default_factory=TokenUsage)
 
 
 def run_assistant(
@@ -212,6 +223,10 @@ class _Run:
         self.awaiting_repair = False
         self.stopped = False
         self.declined = False
+        self.prompt_tokens = 0
+        self.completion_tokens = 0
+        self.latest_prompt_tokens = 0
+        self.inference_calls = 0
         # Repair prompts sent with the next model call only, never saved.
         self.transient: list[Message] = []
 
@@ -237,6 +252,8 @@ class _Run:
                 return self.finish(MODEL_UNAVAILABLE_MESSAGE, record=True)
             except ModelClientError:
                 return self.finish(MODEL_UNAVAILABLE_MESSAGE, record=True)
+
+            self.record_token_usage(assistant_message)
 
             if not assistant_message.tool_calls:
                 reprompt = self.missing_call_reprompt(assistant_message.content)
@@ -359,6 +376,12 @@ class _Run:
     def add_tool_result(self, tool_name: str, content: str) -> None:
         self.history.append({"role": "tool", "tool_name": tool_name, "content": content})
 
+    def record_token_usage(self, message: AssistantMessage) -> None:
+        self.prompt_tokens += message.prompt_tokens
+        self.completion_tokens += message.completion_tokens
+        self.latest_prompt_tokens = message.prompt_tokens
+        self.inference_calls += 1
+
     def pause(self, pending: PendingAction) -> AssistantRun:
         print(f"Assistant tool calls: {self.tool_call_count}")
         return self._result(f"Please confirm: {pending.summary}.", pending_action=pending)
@@ -396,4 +419,11 @@ class _Run:
             failures=tuple(self.failures),
             repair_attempts=self.repair_attempts,
             stopped_after_failed_repair=failed_repair,
+            token_usage=TokenUsage(
+                prompt_tokens=self.prompt_tokens,
+                completion_tokens=self.completion_tokens,
+                total_tokens=self.prompt_tokens + self.completion_tokens,
+                context_percentage=round(self.latest_prompt_tokens / settings.ollama_num_ctx * 100, 1),
+                inference_calls=self.inference_calls,
+            ),
         )

@@ -13,17 +13,25 @@ function loadConversation() {
 
 const assistantSlice = createSlice({
   name: 'assistant',
-  initialState: { conversation: loadConversation() },
+  initialState: {
+    conversation: loadConversation(),
+    tokenUsage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, context_percentage: 0, inference_calls: 0 },
+  },
   reducers: {
     conversationCleared(state) {
       state.conversation = []
+      state.tokenUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, context_percentage: 0, inference_calls: 0 }
     },
     conversationSet(state, action) {
       state.conversation = action.payload
     },
+    tokenUsageSet(state, action) {
+      state.tokenUsage = action.payload
+    },
   },
 })
 
-export const { conversationCleared, conversationSet } = assistantSlice.actions
+export const { conversationCleared, conversationSet, tokenUsageSet } = assistantSlice.actions
 export const selectConversation = (state) => state.assistant.conversation
+export const selectTokenUsage = (state) => state.assistant.tokenUsage
 export default assistantSlice.reducer

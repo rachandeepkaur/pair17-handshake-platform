@@ -34,6 +34,8 @@ class AssistantMessage:
 
     content: str = ""
     tool_calls: tuple[ToolCall, ...] = ()
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
 
     def as_ollama_message(self) -> Message:
         message: Message = {"role": "assistant", "content": self.content}

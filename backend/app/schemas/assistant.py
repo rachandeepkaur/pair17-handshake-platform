@@ -71,9 +71,18 @@ class AssistantPendingAction(BaseModel):
     summary: str
 
 
+class AssistantTokenUsage(BaseModel):
+    prompt_tokens: int = Field(ge=0)
+    completion_tokens: int = Field(ge=0)
+    total_tokens: int = Field(ge=0)
+    context_percentage: float = Field(ge=0)
+    inference_calls: int = Field(ge=0)
+
+
 class AssistantChatResponse(BaseModel):
     answer: str
     conversation: list[AssistantConversationMessage]
     tool_call_count: int
     stopped_at_iteration_limit: bool
     pending_action: AssistantPendingAction | None = None
+    token_usage: AssistantTokenUsage

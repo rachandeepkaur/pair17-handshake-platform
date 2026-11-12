@@ -43,6 +43,7 @@ def test_chat_endpoint_runs_the_assistant_for_a_student() -> None:
     body = response.json()
     assert body["answer"] == "I can help with that."
     assert body["tool_call_count"] == 0
+    assert body["token_usage"] == {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "context_percentage": 0, "inference_calls": 1}
     assert body["conversation"][-1] == {"role": "assistant", "content": "I can help with that.", "tool_name": None, "tool_calls": []}
     assert client.calls[0][0]["role"] == "system"
 

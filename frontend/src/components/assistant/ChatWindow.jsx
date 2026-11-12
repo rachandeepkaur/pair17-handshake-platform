@@ -14,7 +14,7 @@ export const SUGGESTIONS = [
 ]
 
 export default function ChatWindow({ chat, heightClass = 'h-[28rem]', showSuggestions = true }) {
-  const { conversation, draft, setDraft, loading, send, pendingAction, decide } = chat
+  const { conversation, draft, setDraft, loading, send, pendingAction, decide, tokenUsage } = chat
   const bottomRef = useRef(null)
   const turns = toTurns(conversation)
 
@@ -73,6 +73,11 @@ export default function ChatWindow({ chat, heightClass = 'h-[28rem]', showSugges
           </div>
         )}
         <div ref={bottomRef} />
+      </div>
+
+      <div className={`border-t px-4 py-2 text-xs ${tokenUsage.context_percentage >= 70 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-gray-100 text-gray-500'}`}>
+        Prompt {tokenUsage.prompt_tokens} · Response {tokenUsage.completion_tokens} · Total {tokenUsage.total_tokens} · Context {tokenUsage.context_percentage}%
+        {tokenUsage.context_percentage >= 70 && ' — context is above 70%; compact the conversation soon.'}
       </div>
 
       <form
