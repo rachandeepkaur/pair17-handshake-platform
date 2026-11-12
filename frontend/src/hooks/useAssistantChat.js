@@ -1,19 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAppDispatch, useAppSelector } from '../app/hooks'
+import { ASSISTANT_STORAGE_KEY, conversationCleared, conversationSet, selectConversation } from '../features/assistant/assistantSlice'
 import { errorMessage } from '../services/api'
 import { confirmAssistantAction, sendAssistantMessage } from '../services/assistantService'
-
-// Shared by the dashboard widget and the full assistant page, so a chat
-// started in one continues in the other. Cleared on sign-out (AuthContext).
-export const ASSISTANT_STORAGE_KEY = 'assistant-conversation'
-
-function loadConversation() {
-  try {
-    const saved = JSON.parse(sessionStorage.getItem(ASSISTANT_STORAGE_KEY) || '[]')
-    return Array.isArray(saved) ? saved : []
-  } catch {
-    return []
-  }
-}
 
 // Tools that change data; the backend pauses before running them.
 const GATED_TOOLS = new Set(['save_job_or_event'])
@@ -37,7 +26,8 @@ export function pendingActionFrom(conversation) {
 }
 
 export function useAssistantChat() {
-  const [conversation, setConversation] = useState(loadConversation)
+  const dispatch = useAppDispatch()
+  const conversation = useAppSelector(selectConversation)
   const [draft, setDraft] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -56,22 +46,22 @@ export function useAssistantChat() {
       if (!message || loading) return
 
       const prior = conversation
-      setConversation([...prior, { role: 'user', content: message }])
+      dispatch(conversationSet([...prior, { role: 'user', content: message }]))
       setDraft('')
       setError('')
       setLoading(true)
       try {
         const response = await sendAssistantMessage(message, prior)
-        setConversation(response.conversation)
+        dispatch(conversationSet(response.conversation))
       } catch (requestError) {
-        setConversation(prior)
+        dispatch(conversationSet(prior))
         setDraft(message)
         setError(errorMessage(requestError, 'The assistant could not respond. Please try again.'))
       } finally {
         setLoading(false)
       }
     },
-    [conversation, draft, loading],
+    [conversation, dispatch, draft, loading],
   )
 
   const pendingAction = useMemo(() => pendingActionFrom(conversation), [conversation])
@@ -83,21 +73,21 @@ export function useAssistantChat() {
       setLoading(true)
       try {
         const response = await confirmAssistantAction(conversation, approved)
-        setConversation(response.conversation)
+        dispatch(conversationSet(response.conversation))
       } catch (requestError) {
         setError(errorMessage(requestError, 'The assistant could not continue. Please try again.'))
       } finally {
         setLoading(false)
       }
     },
-    [conversation, loading, pendingAction],
+    [conversation, dispatch, loading, pendingAction],
   )
 
   const reset = useCallback(() => {
-    setConversation([])
+    dispatch(conversationCleared())
     setDraft('')
     setError('')
-  }, [])
+  }, [dispatch])
 
   return { conversation, draft, setDraft, loading, error, send, reset, pendingAction, decide }
 }

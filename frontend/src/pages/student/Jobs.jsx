@@ -7,15 +7,23 @@ import EmptyState from '../../components/ui/EmptyState'
 import PageHeader from '../../components/ui/PageHeader'
 import Skeleton from '../../components/ui/Skeleton'
 import { useFetch } from '../../hooks/useFetch'
+import { useAppDispatch, useAppSelector } from '../../app/hooks'
+import { jobsLoaded, selectJobs } from '../../features/jobsCompanies/jobsCompaniesSlice'
 import { getStudentJobs } from '../../services/studentJobService'
 import { JOB_CATEGORIES } from '../../utils/constants'
 
 export default function StudentJobs() {
+  const dispatch = useAppDispatch()
+  const jobs = useAppSelector(selectJobs)
   const [searchParams] = useSearchParams()
   const urlQuery = searchParams.get('q') || ''
   const [draft, setDraft] = useState({ q: urlQuery, category: '', city: '' })
   const [filters, setFilters] = useState({ q: urlQuery, category: '', city: '' })
   const { data, loading, error } = useFetch(() => getStudentJobs(filters), [filters])
+
+  useEffect(() => {
+    if (data) dispatch(jobsLoaded(data.items))
+  }, [data, dispatch])
 
   useEffect(() => {
     setDraft((current) => ({ ...current, q: urlQuery }))
@@ -55,10 +63,10 @@ export default function StudentJobs() {
       {error && <ErrorMessage message={error} />}
       {loading ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2"><Skeleton className="h-56 rounded-2xl" /><Skeleton className="h-56 rounded-2xl" /></div>
-      ) : data?.items?.length ? (
+      ) : jobs.length ? (
         <>
           <p className="text-sm text-gray-500">{data.total} {data.total === 1 ? 'job' : 'jobs'} found</p>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{data.items.map((job) => <StudentJobCard key={job.id} job={job} />)}</div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{jobs.map((job) => <StudentJobCard key={job.id} job={job} />)}</div>
         </>
       ) : !error && (
         <EmptyState icon={Briefcase} title="No matching jobs" description="Try a different job title, company, category, or city." />
