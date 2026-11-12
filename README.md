@@ -197,6 +197,7 @@ python backend/evaluation/run_transcripts.py         # Part B: five transcripts 
 python backend/evaluation/run_confirmation_demo.py   # Part C: decline/approve a save -> docs/evaluation/confirmation_demo.txt
 python backend/evaluation/run_injection_eval.py      # Part C: 5 injection queries, defense off/on -> docs/evaluation/injection_eval.md
 python backend/evaluation/run_reliability_eval.py    # Part C: 22 turns, repair off/on -> docs/evaluation/reliability_eval.md
+python backend/evaluation/agent_harness.py           # Lab 2: deterministic guardrail harness -> docs/evaluation/agent_harness.jsonl
 ```
 
 `run_injection_eval.py` adds one job and one event with injected instructions. Remove them with
