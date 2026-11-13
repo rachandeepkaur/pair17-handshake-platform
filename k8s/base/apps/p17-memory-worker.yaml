@@ -1,0 +1,51 @@
+# p17-memory-worker: consumes memory.consolidation_requested and memory.session_ended
+# (consumer group p17-memory-worker). Calls the Ollama model, so one replica, a long
+# processing budget, and the assistant ConfigMap for OLLAMA_HOST / OLLAMA_MODEL.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: p17-memory-worker
+  labels: {app.kubernetes.io/name: p17-memory-worker, app.kubernetes.io/component: worker}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: p17-memory-worker}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: p17-memory-worker, app.kubernetes.io/component: worker}
+    spec:
+      enableServiceLinks: false
+      # Let an in-flight message finish and commit before the pod is killed.
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10017
+        runAsGroup: 10017
+      containers:
+        - name: worker
+          image: p17-kafka-worker:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "app.workers.memory_worker"]
+          envFrom:
+            - configMapRef: {name: p17-backend-config}
+            - configMapRef: {name: p17-assistant-config}
+          env:
+            - {name: SERVICE_NAME, value: worker}
+            - {name: WORKER_MAX_ATTEMPTS, value: "3"}
+            - {name: WORKER_RETRY_BACKOFF_SECONDS, value: "0.5"}
+            - name: MONGO_PASSWORD
+              valueFrom: {secretKeyRef: {name: p17-handshake-secrets, key: MONGO_PASSWORD}}
+            - name: MONGO_URI
+              value: mongodb://$(MONGO_USER):$(MONGO_PASSWORD)@$(MONGO_HOST)/?authSource=admin
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          # Healthy while the consumer loop writes its heartbeat at least once a minute.
+          livenessProbe:
+            exec: {command: ["python", "-m", "app.workers.healthcheck"]}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 384Mi}

@@ -37,8 +37,8 @@ class Settings(BaseSettings):
     # Containerized deployment (Lab 2). Defaults keep the local monolith working.
     service_name: str = "monolith"
     cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:9170"
-    # Empty means "not configured": the health check skips that dependency.
-    mongo_uri: str = ""
+    # MongoDB is the system of record (Lab 2). Kafka: empty means "not configured".
+    mongo_uri: str = "mongodb://localhost:27017"
     mongo_db: str = "p17_handshake"
     kafka_bootstrap_servers: str = ""
     # Platform services the assistant depends on, as "name=url" pairs separated by commas.

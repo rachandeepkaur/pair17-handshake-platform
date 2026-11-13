@@ -26,8 +26,9 @@ def create_access_token(
     subject: str,
     role: str,
     expires_delta: timedelta | None = None,
+    session_id: str | None = None,
 ) -> str:
-    """Create a signed JWT containing the account ID and role."""
+    """Create a signed JWT containing the account ID, role, and server-side session id."""
 
     expires_at = datetime.now(timezone.utc) + (
         expires_delta
@@ -38,6 +39,8 @@ def create_access_token(
         "role": role,
         "exp": expires_at,
     }
+    if session_id:
+        payload["sid"] = session_id
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 

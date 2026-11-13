@@ -188,3 +188,101 @@ def build_job_handler(db: Any):
         return "processed"
 
     return handle
+
+
+# -------------------------------------------------------------------- memory worker
+def build_memory_handler(db: Any, model: Any = None):
+    """memory.consolidation_requested -> consolidate student_memory (LLM, can take minutes);
+    memory.session_ended -> compact the session's conversation into learned memory."""
+
+    from bson import ObjectId
+
+    from app.assistant import consolidation
+    from app.assistant.memory import CONSOLIDATION_TARGET, request_consolidation
+
+    model = model or consolidation.ollama_json
+    memories = db["student_memory"]
+    audits = db["memory_consolidations"]
+    conversations = db["conversations"]
+
+    def consolidate(event: EventEnvelope) -> str:
+        student_id = int(event.data["student_id"])
+        if audits.find_one({"_id": event.event_id}, {"_id": 1}):
+            return "duplicate"
+        snapshot = memories.find_one({"_id": student_id}) or {"entries": [], "version": 0}
+        before = [{k: e[k] for k in ("date", "category", "description")} for e in snapshot.get("entries", [])]
+        started = _now()
+        memories.update_one(
+            {"_id": student_id},
+            {"$set": {"consolidation.status": "running", "consolidation.event_id": event.event_id,
+                      "consolidation.started_at": started}},
+            upsert=True,
+        )
+
+        result = consolidation.consolidate(before, model, target=CONSOLIDATION_TARGET)
+        after = [{**e, "source": "consolidation"} for e in result.entries]
+        status = {
+            "status": "done",
+            "event_id": event.event_id,
+            "started_at": started,
+            "finished_at": _now(),
+            "before": len(before),
+            "after": len(after),
+            "model_calls": result.model_calls,
+            "model_failures": result.model_failures,
+        }
+        # Optimistic concurrency: lines added while the model was working are kept.
+        written = memories.update_one(
+            {"_id": student_id, "version": snapshot.get("version", 0)},
+            {"$set": {"entries": after, "consolidation": status, "updated_at": _now(),
+                      "last_consolidated_at": _now()}, "$inc": {"version": 1}},
+        )
+        if written.matched_count == 0:
+            current = memories.find_one({"_id": student_id}) or {"entries": []}
+            seen = {(e["date"], e["category"], e["description"]) for e in snapshot.get("entries", [])}
+            newer = [e for e in current["entries"] if (e["date"], e["category"], e["description"]) not in seen]
+            memories.update_one(
+                {"_id": student_id},
+                {"$set": {"entries": after + newer, "consolidation": {**status, "kept_concurrent": len(newer)},
+                          "updated_at": _now(), "last_consolidated_at": _now()}, "$inc": {"version": 1}},
+            )
+        insert_once(
+            audits,
+            {**{k: v for k, v in status.items() if k != "status"}, "_id": event.event_id, "student_id": student_id,
+             "before_entries": before, "after_entries": result.entries, "decisions": result.decisions},
+        )
+        return "processed"
+
+    def compact_session(event: EventEnvelope) -> str:
+        student_id = int(event.data["student_id"])
+        try:
+            conversation_id = ObjectId(event.data["conversation_id"])
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(f"bad conversation_id: {exc}") from exc
+        conversation = conversations.find_one({"_id": conversation_id})
+        if conversation is None:
+            return "duplicate"  # already compacted (or expired)
+        already = memories.find_one({"_id": student_id, "entries.source_event_id": event.event_id}, {"_id": 1})
+        if not already:
+            facts = consolidation.extract_facts(conversation.get("messages", []), model)
+            if facts:
+                memories.update_one(
+                    {"_id": student_id},
+                    {"$push": {"entries": {"$each": [{**f, "source": "session", "source_event_id": event.event_id} for f in facts]}},
+                     "$inc": {"version": 1}, "$set": {"updated_at": _now(), "student_id": student_id}},
+                    upsert=True,
+                )
+        conversations.delete_one({"_id": conversation_id})
+        total = len((memories.find_one({"_id": student_id}, {"entries": 1}) or {}).get("entries", []))
+        if total > 50:
+            request_consolidation(db, student_id, reason="size")
+        return "processed"
+
+    def handle(event: EventEnvelope) -> str:
+        if event.event_type == topics.MEMORY_CONSOLIDATION_REQUESTED:
+            return consolidate(event)
+        if event.event_type == topics.MEMORY_SESSION_ENDED:
+            return compact_session(event)
+        raise ValueError(f"unexpected event_type {event.event_type!r}")
+
+    return handle

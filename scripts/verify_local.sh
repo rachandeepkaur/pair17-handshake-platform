@@ -76,25 +76,21 @@ expect 200 "company team           -> company service"     "${C[@]}" "$WEB/api/t
 expect 401 "unauthenticated request is rejected"                     "$WEB/api/student/jobs"
 expect 404 "unknown /api path is not routed"                         "$WEB/api/nope"
 
-section "4. Backend services reach their databases (from inside each container)"
+section "4. Backend services reach MongoDB, the system of record (from inside each container)"
 for entry in "${SERVICES[@]}"; do
   svc=${entry%%:*}
   if out=$(docker exec "p17-$svc-service" python -c "
-from sqlalchemy import text; from app.database import engine
-with engine.connect() as c:
-    print(c.execute(text('SELECT VERSION()')).scalar(), c.execute(text('SELECT COUNT(*) FROM jobs')).scalar())" 2>&1); then
-    pass "p17-$svc-service -> p17-mysql (MySQL ${out% *}, jobs table rows=${out##* })"
-  else fail "p17-$svc-service -> p17-mysql: ${out:0:200}"; fi
+from app.mongo import get_database
+db = get_database()
+print(db.command('buildInfo')['version'], db.jobs.count_documents({}), db.accounts.count_documents({}))" 2>&1); then
+    read -r version jobs accounts <<< "$out"
+    pass "p17-$svc-service -> p17-mongodb (MongoDB $version, jobs=$jobs, accounts=$accounts)"
+  else fail "p17-$svc-service -> p17-mongodb: ${out:0:200}"; fi
 done
-for entry in "${SERVICES[@]}"; do
-  svc=${entry%%:*}
-  if out=$(docker exec "p17-$svc-service" python -c "
-import os; from pymongo import MongoClient
-c = MongoClient(os.environ['MONGO_URI'], serverSelectionTimeoutMS=3000)
-print(c.admin.command('ping')['ok'], c.server_info()['version'])" 2>&1); then
-    pass "p17-$svc-service -> p17-mongodb ping ok=${out% *} (MongoDB ${out#* })"
-  else fail "p17-$svc-service -> p17-mongodb: $out"; fi
-done
+if docker exec p17-mongodb mongosh -u p17_admin -p "${P17_MONGO_PASSWORD:-p17_mongo_pass}" --authenticationDatabase admin \
+     --quiet p17_handshake --eval 'quit(db.sessions.getIndexes().some(i => i.expireAfterSeconds === 0) ? 0 : 1)' >/dev/null 2>&1; then
+  pass "sessions collection has a TTL index on expires_at (expired sessions are deleted)"
+else fail "sessions TTL index missing"; fi
 
 section "5. AI Assistant reaches platform services and Ollama"
 expect 200 "assistant /health" "http://localhost:9176/health"

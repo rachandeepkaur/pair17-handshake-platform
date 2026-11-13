@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import IntegrityError
+from pymongo.errors import DuplicateKeyError
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +60,9 @@ def register_exception_handlers(app: FastAPI) -> None:
             },
         )
 
-    @app.exception_handler(IntegrityError)
-    async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONResponse:
-        logger.warning("Integrity error on %s: %s", request.url.path, exc.orig)
+    @app.exception_handler(DuplicateKeyError)
+    async def handle_duplicate_key(request: Request, exc: DuplicateKeyError) -> JSONResponse:
+        logger.warning("Duplicate key on %s: %s", request.url.path, exc.details)
         return JSONResponse(status_code=409, content={"detail": "This record conflicts with existing data"})
 
     @app.exception_handler(Exception)

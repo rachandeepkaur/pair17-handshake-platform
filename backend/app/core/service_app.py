@@ -5,7 +5,7 @@ Every service gets the same CORS policy, error handlers, and two health
 endpoints:
 
 - GET /health/live  -> 200 while the process is serving requests.
-- GET /health       -> 200 when required dependencies (MySQL, MongoDB, Kafka)
+- GET /health       -> 200 when required dependencies (MongoDB, Kafka)
                        are reachable, 503 otherwise. Docker's HEALTHCHECK and
                        compose `depends_on: service_healthy` use this one.
 """
@@ -53,6 +53,17 @@ def create_service_app(
 
     for router_module in routers:
         app.include_router(router_module.router)
+
+    @app.on_event("startup")
+    def create_indexes() -> None:
+        # Idempotent. A MongoDB outage must not stop the service from starting;
+        # /health reports it and the next start retries.
+        try:
+            from app.mongo import ensure_indexes, get_database
+
+            ensure_indexes(get_database())
+        except Exception as exc:  # noqa: BLE001
+            logging.getLogger("p17").warning("could not ensure MongoDB indexes: %s", exc)
 
     if serve_profile_pictures:
         from fastapi.staticfiles import StaticFiles

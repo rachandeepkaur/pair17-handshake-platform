@@ -4,10 +4,10 @@ from fastapi.testclient import TestClient
 
 from app.assistant.llm_client import get_model_client
 from app.assistant.tools.schemas import AssistantMessage, Message, ToolDefinition
-from app.database import get_db
+from app.mongo import get_db
 from app.dependencies import get_current_user
 from app.main import app
-from app.models.account import Account, AccountRole
+from app.mongo import Doc
 
 
 class FakeClient:
@@ -20,7 +20,7 @@ class FakeClient:
         return self.response
 
 
-def _configure_dependencies(account: Account, client: FakeClient) -> None:
+def _configure_dependencies(account: Doc, client: FakeClient) -> None:
     app.dependency_overrides[get_current_user] = lambda: account
     app.dependency_overrides[get_db] = lambda: object()
     app.dependency_overrides[get_model_client] = lambda: client
@@ -28,7 +28,7 @@ def _configure_dependencies(account: Account, client: FakeClient) -> None:
 
 def test_chat_endpoint_runs_the_assistant_for_a_student() -> None:
     client = FakeClient(AssistantMessage(content="I can help with that."))
-    account = Account(id=1, email="student@example.com", password_hash="unused", role=AccountRole.STUDENT)
+    account = Doc({"_id": 1, "email": "student@example.com", "password_hash": "unused", "role": "student"})
     _configure_dependencies(account, client)
 
     try:
@@ -49,7 +49,7 @@ def test_chat_endpoint_runs_the_assistant_for_a_student() -> None:
 
 def test_chat_endpoint_rejects_blank_messages() -> None:
     client = FakeClient(AssistantMessage(content="This should not be used."))
-    account = Account(id=1, email="student@example.com", password_hash="unused", role=AccountRole.STUDENT)
+    account = Doc({"_id": 1, "email": "student@example.com", "password_hash": "unused", "role": "student"})
     _configure_dependencies(account, client)
 
     try:
@@ -62,7 +62,7 @@ def test_chat_endpoint_rejects_blank_messages() -> None:
 
 def test_company_chat_returns_controlled_placeholder_without_model_call() -> None:
     client = FakeClient(AssistantMessage(content="This should not be used."))
-    account = Account(id=2, email="company@example.com", password_hash="unused", role=AccountRole.COMPANY)
+    account = Doc({"_id": 2, "email": "company@example.com", "password_hash": "unused", "role": "company"})
     _configure_dependencies(account, client)
 
     try:

@@ -33,9 +33,11 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  // JWTs are stateless, so signing out is purely a client-side action:
-  // drop the token and every protected route redirects on its own.
+  // Sessions live on the server (MongoDB): end it there so the token stops
+  // working and the assistant compacts this session's conversation. The local
+  // sign-out happens regardless of whether that request succeeds.
   const logout = () => {
+    authService.logout().catch(() => {})
     persist(null, null)
     setToken(null)
     setRole(null)

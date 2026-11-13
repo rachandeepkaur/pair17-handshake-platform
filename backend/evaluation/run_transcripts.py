@@ -23,14 +23,11 @@ REPO_DIR = BACKEND_DIR.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from sqlalchemy import select  # noqa: E402
 
 from app.assistant.agent import MAX_ASSISTANT_ITERATIONS, run_assistant  # noqa: E402
 from app.assistant.llm_client import OllamaClient  # noqa: E402
 from app.assistant.tools.schemas import AssistantContext, Message  # noqa: E402
-from app.database import SessionLocal  # noqa: E402
-from app.models.account import Account  # noqa: E402
-from app.models.student import Student  # noqa: E402
+from app.mongo import Doc, get_database  # noqa: E402
 
 TRANSCRIPT_DIR = REPO_DIR / "docs" / "transcripts"
 
@@ -167,12 +164,13 @@ def main() -> int:
     conversations: dict[str, list[Message]] = {}
     total_pass = total_checks = 0
 
-    with SessionLocal() as db:
-        account = db.scalar(select(Account).where(Account.email == args.student))
+    db = get_database()
+    if True:
+        account = Doc(db.accounts.find_one({"email": args.student}) or {}) or None
         if account is None or account.role != "student":
             print(f"No seeded student with email {args.student}. Run the seed first.")
             return 1
-        student = db.get(Student, account.id)
+        student = Doc(db.students.find_one({"_id": account.id}))
         context = AssistantContext(account_id=account.id, role="student", db=db)
         TRANSCRIPT_DIR.mkdir(parents=True, exist_ok=True)
 

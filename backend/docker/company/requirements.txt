@@ -1,3 +1,5 @@
 -r requirements-base.txt
 # Company logo uploads (multipart/form-data).
 python-multipart==0.0.9
+# Kafka producer: memory.session_ended at logout (the auth router lives here).
+confluent-kafka==2.6.1

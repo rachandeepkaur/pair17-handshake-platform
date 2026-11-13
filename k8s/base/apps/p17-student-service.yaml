@@ -46,8 +46,6 @@ spec:
           env:
             - {name: SERVICE_NAME, value: student}
             - {name: PORT, value: "9171"}
-            - name: DB_PASSWORD
-              valueFrom: {secretKeyRef: {name: p17-handshake-secrets, key: DB_PASSWORD}}
             - name: MONGO_PASSWORD
               valueFrom: {secretKeyRef: {name: p17-handshake-secrets, key: MONGO_PASSWORD}}
             - name: JWT_SECRET
@@ -58,7 +56,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             capabilities: {drop: [ALL]}
-          # Ready only when MySQL, MongoDB, and Kafka are reachable (503 otherwise).
+          # Ready only when MongoDB and Kafka are reachable (503 otherwise).
           readinessProbe:
             httpGet: {path: /health, port: http}
             initialDelaySeconds: 5

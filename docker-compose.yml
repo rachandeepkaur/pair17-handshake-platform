@@ -1,9 +1,11 @@
-# Pair 17 Handshake platform: six backend services, three Kafka workers, web gateway, MySQL, MongoDB, Kafka.
+# Pair 17 Handshake platform: six backend services, four Kafka workers, web gateway, MongoDB, Kafka.
 #
-#   docker compose up -d --build                         # start everything
-#   docker compose --profile seed run --rm p17-db-seed   # load demo data (once)
-#   docker compose ps                                    # health status
+#   docker compose up -d --build                               # start everything
+#   docker compose --profile seed run --rm p17-db-seed         # load demo data into MongoDB (once)
+#   docker compose --profile migrate run --rm p17-db-migrate   # or: copy the Lab 1 MySQL data into MongoDB
+#   docker compose ps                                          # health status
 #
+# MongoDB is the system of record. MySQL (profile "migrate") only exists as the Lab 1 migration source.
 # Host ports (PORT_BASE 9170): web 9170, services 9171-9176, MongoDB 9177, MySQL 9178, Kafka 9179.
 # Secrets below have local-only defaults; override them in the root .env.
 
@@ -15,7 +17,7 @@ x-backend-env: &backend-env
   DB_PREFIX: p17
   SEED: "17"
   CITY_SET: ${CITY_SET:-Palo Alto,Mountain View,Menlo Park}
-  # MySQL remains the Lab 1 system of record.
+  # MySQL connection: used only by the one-time migration (p17-db-migrate).
   DB_HOST: p17-mysql
   DB_PORT: "3306"
   DB_NAME: p17_handshake
@@ -30,8 +32,6 @@ x-backend-env: &backend-env
   CORS_ORIGINS: http://localhost:9170,http://localhost:5173,http://localhost:5174
 
 x-backend-depends: &backend-depends
-  p17-mysql:
-    condition: service_healthy
   p17-mongodb:
     condition: service_healthy
   p17-kafka:
@@ -39,9 +39,11 @@ x-backend-depends: &backend-depends
 
 services:
   # ---------------------------------------------------------------- data tier
+  # Lab 1 database, kept only as the migration source: docker compose --profile migrate ...
   p17-mysql:
     image: mysql:8.0
     container_name: p17-mysql
+    profiles: [migrate]
     environment:
       MYSQL_ROOT_PASSWORD: ${P17_MYSQL_ROOT_PASSWORD:-p17_root_pass}
       MYSQL_DATABASE: p17_handshake
@@ -249,7 +251,8 @@ services:
     command:
       - |
         set -e
-        for t in application.created application.updated application.status_changed event.registration_created job.created; do
+        for t in application.created application.updated application.status_changed event.registration_created job.created \
+                 memory.session_ended memory.consolidation_requested; do
           for name in "$$t" "$$t.dlq"; do
             /opt/kafka/bin/kafka-topics.sh --bootstrap-server p17-kafka:9092 --create --if-not-exists \
               --topic "$$name" --partitions 3 --replication-factor 1
@@ -306,6 +309,24 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  # Assistant memory: consolidation and session compaction call the local model (minutes on a CPU).
+  p17-memory-worker:
+    image: p17-kafka-worker:latest
+    container_name: p17-memory-worker
+    command: ["python", "-m", "app.workers.memory_worker"]
+    environment:
+      <<: *worker-env
+      OLLAMA_HOST: ${P17_OLLAMA_HOST:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks: [p17-handshake-net]
+    depends_on:
+      <<: *worker-depends
+      p17-application-worker:
+        condition: service_started
+    restart: unless-stopped
+
   # -------------------------------------------------------------- web gateway
   p17-frontend:
     build:
@@ -343,7 +364,24 @@ services:
     environment: *backend-env
     networks: [p17-handshake-net]
     depends_on:
+      p17-mongodb:
+        condition: service_healthy
+
+  p17-db-migrate:
+    profiles: [migrate]
+    image: p17-db-seed:latest
+    build:
+      context: ./backend
+      dockerfile: docker/seed/Dockerfile
+    container_name: p17-db-migrate
+    entrypoint: ["python", "db/migrate_mysql_to_mongo.py"]
+    command: ["--verify"]
+    environment: *backend-env
+    networks: [p17-handshake-net]
+    depends_on:
       p17-mysql:
+        condition: service_healthy
+      p17-mongodb:
         condition: service_healthy
 
 networks:
