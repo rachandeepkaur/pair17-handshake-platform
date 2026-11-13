@@ -146,3 +146,240 @@ Observations
     fetching several job details.
   - Compared with the previous run (2026-10-17, 22 turns), T21 no longer lost
     its chain before repair; model output varies run to run.
+
+
+==========================================================================
+Lab 2 — Kafka event pipeline: happy path and three failure cases
+==========================================================================
+
+Date:     2026-11-13
+Stack:    docker compose (Kafka 3.8.0 KRaft, MongoDB 7.0, MySQL 8.0), branch feature/company
+Command:  scripts/kafka_demos.sh        (cases 0-3, output below verbatim)
+Workers:  p17-application-worker, p17-event-worker, p17-job-worker
+          consumer groups p17-<worker>, enable.auto.commit=false,
+          WORKER_MAX_ATTEMPTS=3, backoff 0.5s, 1s
+
+Delivery design (backend/app/workers/runtime.py)
+- At-least-once: the worker commits a message's offset only AFTER its MongoDB
+  write succeeded, or after the message was copied to the dead-letter topic.
+- Idempotent consumers (backend/app/workers/handlers.py): every insert uses a
+  deterministic _id (the event_id, or registration-<id> / the job_id business
+  key), so a duplicate becomes a DuplicateKeyError that is logged as "already
+  applied; skipped". Counts are recomputed with count_documents + $set, never
+  incremented.
+- Poison messages: up to 3 attempts with exponential backoff, then the original
+  bytes go to "<topic>.dlq" with x-error / x-attempts / x-original-* headers and
+  the offset is committed, so the partition keeps moving.
+- MongoDB outages are not treated as poison: the worker retries the same
+  message every 5s without committing or dead-lettering it.
+
+Unit tests: cd backend && ../.venv/bin/python -m pytest -q   ->   63 passed
+(tests/test_kafka_events.py covers retries, the DLQ decision and idempotency.)
+
+
+==================================================================
+Case 0: API calls publish events; workers project them into MongoDB
+==================================================================
+
+--- Company creates a job (job service -> job.created)
+POST /api/jobs -> job_id=302
+
+--- Student applies (application service -> application.created)
+POST /api/student/jobs/302/apply -> application_id=1502
+
+--- Company marks it Reviewed (application service -> application.updated + application.status_changed)
+PATCH status -> Reviewed
+
+--- Student registers for an event (event service -> event.registration_created)
+POST /api/student/events/3/register -> 201
+
+--- Producer log lines (API services)
+09:08:04 INFO [job] published job.created key=302 event_id=6f382972-e6ed-4f28-b281-84651df1bbbd partition=1 offset=1
+09:08:04 INFO [application] published application.created key=1502 event_id=7d806fb4-db14-44b6-ac2a-cc6d3497d88c partition=1 offset=2
+09:08:04 INFO [application] published application.updated key=1502 event_id=9893384e-bbad-4183-90b6-c866be779358 partition=1 offset=1
+09:08:04 INFO [application] published application.status_changed key=1502 event_id=ff88d601-0e32-4e82-a6fb-b4c0a0d2a763 partition=1 offset=3
+09:08:04 INFO [event] published event.registration_created key=3 event_id=71e41a46-de92-47a1-ad18-f2713ec9f43b partition=1 offset=1
+
+--- Worker log lines
+09:08:04 INFO [job-worker] received job.created[1]@1 key=302
+09:08:04 INFO [job-worker] job.created[1]@1 key=302 event_id=6f382972-e6ed-4f28-b281-84651df1bbbd written to MongoDB
+09:08:04 INFO [job-worker] committed offset 2 for job.created[1]
+09:08:04 INFO [application-worker] received application.created[1]@2 key=1502
+09:08:04 INFO [application-worker] application.created[1]@2 key=1502 event_id=7d806fb4-db14-44b6-ac2a-cc6d3497d88c written to MongoDB
+09:08:04 INFO [application-worker] committed offset 3 for application.created[1]
+09:08:04 INFO [application-worker] received application.updated[1]@1 key=1502
+09:08:04 INFO [application-worker] application.updated[1]@1 key=1502 event_id=9893384e-bbad-4183-90b6-c866be779358 written to MongoDB
+09:08:04 INFO [application-worker] committed offset 2 for application.updated[1]
+09:08:04 INFO [application-worker] received application.status_changed[1]@3 key=1502
+09:08:04 INFO [application-worker] application.status_changed[1]@3 key=1502 event_id=ff88d601-0e32-4e82-a6fb-b4c0a0d2a763 written to MongoDB
+09:08:04 INFO [application-worker] committed offset 4 for application.status_changed[1]
+09:08:04 INFO [event-worker] received event.registration_created[1]@1 key=3
+09:08:04 INFO [event-worker] event.registration_created[1]@1 key=3 event_id=71e41a46-de92-47a1-ad18-f2713ec9f43b written to MongoDB
+09:08:04 INFO [event-worker] committed offset 2 for event.registration_created[1]
+
+--- MongoDB projections written by the workers
+job_search_index       {"_id":302,"city":"Palo Alto","skills":["python","kafka"],"source_event_id":"6f382972-e6ed-4f28-b281-84651df1bbbd","title":"Kafka Pipeline Intern 1794560883"}
+application_events     {"_id":"7d806fb4-db14-44b6-ac2a-cc6d3497d88c","event_type":"application.created"}
+application_events     {"_id":"9893384e-bbad-4183-90b6-c866be779358","event_type":"application.updated"}
+application_events     {"_id":"ff88d601-0e32-4e82-a6fb-b4c0a0d2a763","event_type":"application.status_changed"}
+notifications          {"_id":"ff88d601-0e32-4e82-a6fb-b4c0a0d2a763","message":"Your application 1502 moved from Pending to Reviewed."}
+event_stats            {"_id":3,"registrations":1,"updated_at":{"$date":"2026-11-13T09:08:04.738Z"}}
+
+==================================================================
+Case 1: the same event published twice with the same key -> stored once
+==================================================================
+
+--- Publish the identical message twice (topic application.created, key 998831, event_id demo-dup-1794560883)
+published 2 messages
+
+--- Application worker log
+09:08:13 INFO [application-worker] received application.created[2]@2 key=998831
+09:08:13 INFO [application-worker] application.created[2]@2 key=998831 event_id=demo-dup-1794560883 written to MongoDB
+09:08:13 INFO [application-worker] committed offset 3 for application.created[2]
+09:08:16 INFO [application-worker] received application.created[2]@3 key=998831
+09:08:16 INFO [application-worker] application.created[2]@3 key=998831 event_id=demo-dup-1794560883 already applied; skipped (idempotent)
+09:08:16 INFO [application-worker] committed offset 4 for application.created[2]
+
+--- MongoDB: documents for this event_id (expect 1)
+application_events count for demo-dup-1794560883 = 1
+
+--- Consumer group p17-application-worker (LAG 0 = both offsets committed)
+TOPIC                       PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG
+application.updated         0          -               0               -
+application.updated         2          -               0               -
+application.updated         1          2               2               0
+application.status_changed  0          -               0               -
+application.status_changed  2          -               0               -
+application.status_changed  1          4               4               0
+application.created         1          3               3               0
+application.created         0          -               0               -
+application.created         2          4               4               0
+
+==================================================================
+Case 2: kill the worker after its MongoDB write, before the offset commit
+==================================================================
+
+--- Restart the application worker with a 30 s pause between the write and the commit
+ Container p17-application-worker  Healthy
+
+--- Publish one event (key 998832, event_id demo-crash-1794560883)
+published
+
+--- Worker log up to the kill
+09:08:38 INFO [application-worker] received application.created[2]@4 key=998832
+09:08:38 INFO [application-worker] application.created[2]@4 key=998832 event_id=demo-crash-1794560883 written to MongoDB
+09:08:38 INFO [application-worker] DEMO: write done, pausing 30s BEFORE committing the offset (kill the worker now)
+
+--- SIGKILL the worker mid-processing
+$ docker kill p17-application-worker
+p17-application-worker
+
+--- State while the worker is dead
+application_events count for demo-crash-1794560883 = 1 (the write happened)
+Consumer group (LAG 1 on this partition = offset NOT committed):
+TOPIC                       PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG
+application.updated         0          -               0               -
+application.updated         2          -               0               -
+application.updated         1          2               2               0
+application.status_changed  0          -               0               -
+application.status_changed  2          -               0               -
+application.status_changed  1          4               4               0
+application.created         1          3               3               0
+application.created         0          -               0               -
+application.created         2          4               5               1
+
+--- Restart the worker normally (no pause)
+ Container p17-application-worker  Healthy
+
+--- Worker log after restart (the same offset is redelivered)
+09:08:45 INFO [application-worker] consumer group p17-application-worker subscribed to application.created, application.updated, application.status_changed
+09:09:21 INFO [application-worker] received application.created[2]@4 key=998832
+09:09:21 INFO [application-worker] application.created[2]@4 key=998832 event_id=demo-crash-1794560883 already applied; skipped (idempotent)
+09:09:21 INFO [application-worker] committed offset 5 for application.created[2]
+
+--- Final state
+application_events count for demo-crash-1794560883 = 1 (still 1: reprocessed, not duplicated)
+TOPIC                       PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG
+application.updated         0          -               0               -
+application.updated         2          -               0               -
+application.updated         1          2               2               0
+application.status_changed  0          -               0               -
+application.status_changed  2          -               0               -
+application.status_changed  1          4               4               0
+application.created         1          3               3               0
+application.created         0          -               0               -
+application.created         2          5               5               0
+
+==================================================================
+Case 3: poison message -> bounded retries -> dead-letter topic -> pipeline continues
+==================================================================
+
+--- Publish a poison message, then a valid one with the SAME key (same partition, right behind it)
+published poison + valid message
+
+--- Application worker log
+09:09:32 INFO [application-worker] received application.status_changed[0]@0 key=998833
+09:09:32 WARNING [application-worker] application.status_changed[0]@0 key=998833 attempt 1/3 failed: ValueError: value is not JSON: Expecting value
+09:09:32 WARNING [application-worker] application.status_changed[0]@0 key=998833 attempt 2/3 failed: ValueError: value is not JSON: Expecting value
+09:09:33 WARNING [application-worker] application.status_changed[0]@0 key=998833 attempt 3/3 failed: ValueError: value is not JSON: Expecting value
+09:09:34 ERROR [application-worker] application.status_changed[0]@0 key=998833 moved to application.status_changed.dlq after 3 attempts: ValueError: value is not JSON: Expecting value
+09:09:34 INFO [application-worker] committed offset 1 for application.status_changed[0]
+09:09:34 INFO [application-worker] received application.status_changed[0]@1 key=998833
+09:09:34 INFO [application-worker] application.status_changed[0]@1 key=998833 event_id=demo-after-poison-1794560883 written to MongoDB
+09:09:34 INFO [application-worker] committed offset 2 for application.status_changed[0]
+
+--- Dead-letter topic application.status_changed.dlq (headers carry the failure)
+x-original-topic:application.status_changed,x-original-partition:0,x-original-offset:0,x-error:ValueError: value is not JSON: Expecting value,x-attempts:3,x-failed-at:2026-11-13T09:09:33.751523+00:00,x-consumer-group:p17-application-worker	998833	this is not json {
+
+--- MongoDB: the valid message after the poison was processed
+{"_id":"demo-after-poison-1794560883","message":"Your application 998833 moved from Pending to Declined."}
+TOPIC                       PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG
+application.updated         0          -               0               -
+application.updated         2          -               0               -
+application.updated         1          2               2               0
+application.status_changed  0          2               2               0
+application.status_changed  2          -               0               -
+application.status_changed  1          4               4               0
+application.created         1          3               3               0
+application.created         0          -               0               -
+application.created         2          5               5               0
+
+
+Findings
+--------
+Case 0 (happy path). Five API calls through the gateway published all five
+topics (application.created, application.updated, application.status_changed,
+event.registration_created, job.created). Each worker received its message,
+wrote MongoDB (application_events, notifications, event_registrations /
+event_stats, job_search_index) and committed the next offset.
+
+Case 1 (duplicate publish, same key). The identical message was produced twice
+on application.created with the same key, so both copies landed on the same
+partition (offsets N and N+1). The first was written; the second hit the
+existing _id = event_id and was skipped. MongoDB holds exactly one document
+for the event_id, and both offsets were committed (LAG 0): the duplicate was
+consumed, not left behind.
+
+Case 2 (worker killed during processing). The worker wrote MongoDB and was
+SIGKILLed during its 30 s pause before the commit. While it was down, the
+document existed but the group's committed offset was one behind the log end
+(LAG 1). On restart, Kafka redelivered that same offset: the event was
+REPROCESSED, not lost. The idempotent write recognised it ("already applied;
+skipped"), the offset was then committed, and MongoDB still has one document.
+Had the kill come before the write, the redelivery would simply have performed
+the write for the first time, so the event is not lost in either position.
+Redelivery came about 40 s after the kill (09:09:21 vs ~09:08:40) because the
+group coordinator waits for the killed member's session to expire
+(session.timeout.ms, default 45 s) before reassigning its partitions.
+
+Case 3 (poison message). A non-JSON value was produced on
+application.status_changed, followed by a valid event with the same key, so it
+sat directly behind the poison on the same partition. The worker failed the
+poison 3 times (backoff 0.5 s, 1 s), copied it unchanged to
+application.status_changed.dlq with the error and original position in its
+headers, committed its offset, and processed the valid event in the same second: the
+pipeline continued after the failed message was isolated.
+
+Known limitation. APIs publish after the MySQL commit; if Kafka is down at that
+moment the API call still succeeds and the event is only logged as unpublished.
+A transactional outbox table relayed to Kafka would close that gap.

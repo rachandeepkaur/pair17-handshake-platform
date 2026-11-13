@@ -10,6 +10,7 @@ endpoints:
                        compose `depends_on: service_healthy` use this one.
 """
 
+import logging
 from collections.abc import Iterable
 from types import ModuleType
 
@@ -32,6 +33,14 @@ def create_service_app(
     check_ollama: bool = False,
 ) -> FastAPI:
     app = FastAPI(title=f"Handshake {service} service (Pair {settings.pair})", description=description)
+
+    # Kafka publish results ("p17.events") go to stdout next to uvicorn's access log.
+    p17_logger = logging.getLogger("p17")
+    if not p17_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(f"%(asctime)s %(levelname)s [{service}] %(message)s"))
+        p17_logger.addHandler(handler)
+        p17_logger.setLevel(logging.INFO)
 
     app.add_middleware(
         CORSMiddleware,

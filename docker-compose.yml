@@ -1,4 +1,4 @@
-# Pair 17 Handshake platform: six backend services, web gateway, MySQL, MongoDB, Kafka.
+# Pair 17 Handshake platform: six backend services, three Kafka workers, web gateway, MySQL, MongoDB, Kafka.
 #
 #   docker compose up -d --build                         # start everything
 #   docker compose --profile seed run --rm p17-db-seed   # load demo data (once)
@@ -234,6 +234,76 @@ services:
         condition: service_healthy
       p17-event-service:
         condition: service_healthy
+    restart: unless-stopped
+
+  # ------------------------------------------------------ Kafka topics + workers
+  # Creates the five event topics and their dead-letter twins (3 partitions each), then exits.
+  p17-kafka-init:
+    image: apache/kafka:3.8.0
+    container_name: p17-kafka-init
+    networks: [p17-handshake-net]
+    depends_on:
+      p17-kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        for t in application.created application.updated application.status_changed event.registration_created job.created; do
+          for name in "$$t" "$$t.dlq"; do
+            /opt/kafka/bin/kafka-topics.sh --bootstrap-server p17-kafka:9092 --create --if-not-exists \
+              --topic "$$name" --partitions 3 --replication-factor 1
+          done
+        done
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server p17-kafka:9092 --list
+    restart: "no"
+
+  p17-application-worker:
+    build:
+      context: ./backend
+      dockerfile: docker/worker/Dockerfile
+    image: p17-kafka-worker:latest
+    container_name: p17-application-worker
+    command: ["python", "-m", "app.workers.application_worker"]
+    environment: &worker-env
+      SERVICE_NAME: worker
+      MONGO_URI: mongodb://p17_admin:${P17_MONGO_PASSWORD:-p17_mongo_pass}@p17-mongodb:27017/?authSource=admin
+      MONGO_DB: p17_handshake
+      KAFKA_BOOTSTRAP_SERVERS: p17-kafka:9092
+      WORKER_MAX_ATTEMPTS: "3"
+      WORKER_RETRY_BACKOFF_SECONDS: "0.5"
+      # Crash-test hook (RUN_LOG case 2): seconds to wait between the MongoDB write and the commit.
+      WORKER_PAUSE_AFTER_WRITE_SECONDS: ${P17_WORKER_PAUSE_AFTER_WRITE_SECONDS:-0}
+    networks: [p17-handshake-net]
+    depends_on: &worker-depends
+      p17-mongodb:
+        condition: service_healthy
+      p17-kafka-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  p17-event-worker:
+    image: p17-kafka-worker:latest
+    container_name: p17-event-worker
+    command: ["python", "-m", "app.workers.event_worker"]
+    environment: *worker-env
+    networks: [p17-handshake-net]
+    depends_on:
+      <<: *worker-depends
+      p17-application-worker:
+        condition: service_started  # built by that service
+    restart: unless-stopped
+
+  p17-job-worker:
+    image: p17-kafka-worker:latest
+    container_name: p17-job-worker
+    command: ["python", "-m", "app.workers.job_worker"]
+    environment: *worker-env
+    networks: [p17-handshake-net]
+    depends_on:
+      <<: *worker-depends
+      p17-application-worker:
+        condition: service_started
     restart: unless-stopped
 
   # -------------------------------------------------------------- web gateway

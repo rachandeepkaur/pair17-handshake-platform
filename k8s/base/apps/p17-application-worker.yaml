@@ -1,0 +1,50 @@
+# p17-application-worker: consumes application.created, application.updated, application.status_changed (consumer group p17-application-worker)
+# and maintains the application timeline + status notifications in MongoDB. Offsets are committed after the write.
+# Replicas share the topic's 3 partitions; more than 3 replicas would sit idle.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: p17-application-worker
+  labels: {app.kubernetes.io/name: p17-application-worker, app.kubernetes.io/component: worker}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app.kubernetes.io/name: p17-application-worker}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: p17-application-worker, app.kubernetes.io/component: worker}
+    spec:
+      enableServiceLinks: false
+      # Let an in-flight message finish and commit before the pod is killed.
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10017
+        runAsGroup: 10017
+      containers:
+        - name: worker
+          image: p17-kafka-worker:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "app.workers.application_worker"]
+          envFrom:
+            - configMapRef: {name: p17-backend-config}
+          env:
+            - {name: SERVICE_NAME, value: worker}
+            - {name: WORKER_MAX_ATTEMPTS, value: "3"}
+            - {name: WORKER_RETRY_BACKOFF_SECONDS, value: "0.5"}
+            - name: MONGO_PASSWORD
+              valueFrom: {secretKeyRef: {name: p17-handshake-secrets, key: MONGO_PASSWORD}}
+            - name: MONGO_URI
+              value: mongodb://$(MONGO_USER):$(MONGO_PASSWORD)@$(MONGO_HOST)/?authSource=admin
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          # Healthy while the consumer loop writes its heartbeat at least once a minute.
+          livenessProbe:
+            exec: {command: ["python", "-m", "app.workers.healthcheck"]}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 256Mi}

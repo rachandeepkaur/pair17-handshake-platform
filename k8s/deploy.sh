@@ -39,9 +39,11 @@ echo "Waiting for data stores..."
 for sts in p17-mysql p17-mongodb p17-kafka; do
   kubectl -n "$NS" rollout status "statefulset/$sts" --timeout=300s
 done
-echo "Waiting for services..."
+kubectl -n "$NS" wait --for=condition=complete job/p17-kafka-topics --timeout=300s
+echo "Waiting for services and workers..."
 for deploy in p17-student-service p17-company-service p17-job-service p17-application-service \
-              p17-event-service p17-assistant-service p17-frontend; do
+              p17-event-service p17-assistant-service p17-frontend \
+              p17-application-worker p17-event-worker p17-job-worker; do
   kubectl -n "$NS" rollout status "deployment/$deploy" --timeout=300s
 done
 

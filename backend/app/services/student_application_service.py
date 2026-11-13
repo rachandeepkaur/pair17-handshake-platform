@@ -10,6 +10,7 @@ from app.models.company import Company
 from app.models.job import Job
 from app.schemas.student_application import StudentApplicationOut
 from app.services import file_service
+from app.events import producer as events, topics
 
 
 def _to_out(application: Application) -> StudentApplicationOut:
@@ -53,6 +54,18 @@ async def create_application(db: Session, student_id: int, job_id: int, resume: 
         select(Application)
         .options(joinedload(Application.job).joinedload(Job.company))
         .where(Application.id == application.id)
+    )
+    events.publish(
+        topics.APPLICATION_CREATED,
+        application.id,
+        {
+            "application_id": application.id,
+            "job_id": application.job_id,
+            "student_id": application.student_id,
+            "company_id": application.job.company_id,
+            "status": application.status,
+            "applied_at": application.applied_at.isoformat(),
+        },
     )
     return _to_out(application)
 

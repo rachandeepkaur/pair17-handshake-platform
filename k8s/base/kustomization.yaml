@@ -18,6 +18,7 @@ resources:
   - data/p17-mysql.yaml
   - data/p17-mongodb.yaml
   - data/p17-kafka.yaml
+  - data/p17-kafka-topics-job.yaml
   - apps/p17-student-service.yaml
   - apps/p17-company-service.yaml
   - apps/p17-job-service.yaml
@@ -25,6 +26,9 @@ resources:
   - apps/p17-event-service.yaml
   - apps/p17-assistant-service.yaml
   - apps/p17-frontend.yaml
+  - apps/p17-application-worker.yaml
+  - apps/p17-event-worker.yaml
+  - apps/p17-job-worker.yaml
 
 # Local images built by `docker compose build`. To deploy from a registry, change newName,
 # for example: kustomize edit set image p17-job-service=ghcr.io/<org>/p17-job-service:1.0
@@ -36,3 +40,4 @@ images:
   - {name: p17-event-service, newTag: latest}
   - {name: p17-assistant-service, newTag: latest}
   - {name: p17-frontend, newTag: latest}
+  - {name: p17-kafka-worker, newTag: latest}

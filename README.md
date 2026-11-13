@@ -180,6 +180,36 @@ docker compose --profile seed down -v      # also delete the MySQL, MongoDB, Kaf
 Optional overrides in the root `.env`: `P17_DB_PASSWORD`, `P17_MYSQL_ROOT_PASSWORD`,
 `P17_MONGO_PASSWORD`, `JWT_SECRET`, `OLLAMA_MODEL`, `P17_OLLAMA_HOST`.
 
+## Kafka event pipeline (Lab 2)
+
+The APIs publish an event after each MySQL commit; three workers consume them and
+maintain MongoDB projections.
+
+| Topic | Producer | Consumer | MongoDB collections |
+|---|---|---|---|
+| `application.created`, `application.updated` | Application service | `p17-application-worker` | `application_events` |
+| `application.status_changed` | Application service (company status change) | `p17-application-worker` | `application_events`, `notifications` |
+| `event.registration_created` | Event service | `p17-event-worker` | `event_registrations`, `event_stats` |
+| `job.created` | Job service | `p17-job-worker` | `job_search_index` |
+
+- **Envelope:** `{event_id, event_type, occurred_at, source, key, data}`. The Kafka key is the
+  entity ID, so all events for one application, event or job stay in order on one partition.
+- **At-least-once delivery:** offsets are committed only after the MongoDB write.
+- **Idempotent writes:** every insert uses a deterministic `_id`, so redelivered or
+  re-published events are skipped.
+- **Poison messages:** after 3 attempts (backoff 0.5 s, then 1 s) the message goes to
+  `<topic>.dlq` with error headers, and the partition moves on.
+- **Topics:** created by `p17-kafka-init` (Compose) or the `p17-kafka-topics` Job (Kubernetes),
+  with 3 partitions each.
+- **Code:** `backend/app/events/` (producer and envelope) and `backend/app/workers/` (consumers).
+
+```bash
+scripts/kafka_demos.sh                       # happy path + the 3 failure cases (output in RUN_LOG.txt)
+docker compose logs -f p17-application-worker
+docker exec p17-kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 \
+  --describe --group p17-application-worker  # committed offsets and lag
+```
+
 ## Kubernetes deployment (Lab 2)
 
 Manifests live in [`k8s/`](k8s/) and deploy into the `p17-handshake` namespace. Every
