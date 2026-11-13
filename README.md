@@ -180,6 +180,50 @@ docker compose --profile seed down -v      # also delete the MySQL, MongoDB, Kaf
 Optional overrides in the root `.env`: `P17_DB_PASSWORD`, `P17_MYSQL_ROOT_PASSWORD`,
 `P17_MONGO_PASSWORD`, `JWT_SECRET`, `OLLAMA_MODEL`, `P17_OLLAMA_HOST`.
 
+## Kubernetes deployment (Lab 2)
+
+Manifests live in [`k8s/`](k8s/) and deploy into the `p17-handshake` namespace. Every
+resource name starts with `p17-`.
+
+| Resource | Kind | Replicas (HPA min–max) | Requests / limits |
+|---|---|---|---|
+| `p17-student-service`, `p17-company-service`, `p17-application-service`, `p17-event-service` | Deployment + ClusterIP Service + HPA | 2 (2–5) | 100m/192Mi · 500m/512Mi |
+| `p17-job-service` | Deployment + ClusterIP Service + HPA | 2 (2–6) | 100m/192Mi · 500m/512Mi |
+| `p17-assistant-service` | Deployment + ClusterIP Service + HPA | 1 (1–3) | 100m/256Mi · 1/512Mi |
+| `p17-frontend` | Deployment + LoadBalancer Service (port 9170) + HPA | 2 (2–4) | 50m/64Mi · 250m/128Mi |
+| `p17-mysql`, `p17-mongodb`, `p17-kafka` | StatefulSet + headless Service + 2Gi PVC | 1 | 250m/512–768Mi · 1/1–1.5Gi |
+| `p17-backend-config`, `p17-assistant-config`, `p17-frontend-config` | ConfigMap | | |
+| `p17-handshake-secrets` | Secret (created by `deploy.sh`, never committed) | | |
+| `p17-mysql-init` | ConfigMap built from `backend/db/schema.sql` by `deploy.sh` | | |
+| `p17-uploads` | PVC (ReadWriteMany), shared by student, company, application | | |
+
+- **Service discovery:** pods reach each other by Service name. Examples: `DB_HOST=p17-mysql`,
+  `KAFKA_BOOTSTRAP_SERVERS=p17-kafka:9092`, and the assistant's
+  `http://p17-job-service:9173`. The nginx gateway uses the FQDN
+  `p17-<svc>-service.p17-handshake.svc.cluster.local`, because nginx's resolver ignores
+  search domains.
+- **Probes:** readiness uses `GET /health` (MySQL, MongoDB and Kafka reachable). Liveness uses
+  `GET /health/live`, so a database outage removes a pod from load balancing without restarting it.
+- **Scaling:** the HPAs target 70% CPU of the requests and need metrics-server. Manual scaling:
+  `kubectl -n p17-handshake scale deployment/p17-job-service --replicas=4`.
+- **Secrets:** `k8s/secrets.env` is git-ignored. `deploy.sh` generates it with random
+  values on first run (template: `k8s/secrets.env.example`). Manifests only reference
+  `p17-handshake-secrets` keys. The Mongo URI is assembled in the pod from
+  `$(MONGO_PASSWORD)`.
+
+```bash
+docker compose build && docker compose --profile seed build   # p17-* images (local cluster uses them directly)
+k8s/deploy.sh --seed                                          # secrets, schema, manifests, rollout, demo data
+kubectl -n p17-handshake get pods,svc,hpa                     # inspect
+kubectl -n p17-handshake logs -f deploy/p17-assistant-service # logs from one service
+kubectl delete namespace p17-handshake                        # remove everything (including volumes)
+```
+
+The app is at http://localhost:9170 on Docker Desktop Kubernetes. On other clusters, use
+`kubectl -n p17-handshake port-forward svc/p17-frontend 9170:9170`, and push the images to a
+registry (see the `images:` block in `k8s/base/kustomization.yaml`). On a multi-node cluster,
+`p17-uploads` needs a storage class that supports ReadWriteMany.
+
 ## Running tests
 
 ```bash

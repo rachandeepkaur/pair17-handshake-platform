@@ -1,0 +1,38 @@
+# Pair 17 Handshake platform on Kubernetes. Deploy with k8s/deploy.sh, which first creates
+# the p17-handshake-secrets Secret and the p17-mysql-init ConfigMap, then runs
+# `kubectl apply -k k8s/base`.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: p17-handshake
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: p17-handshake
+    includeSelectors: false
+
+resources:
+  - namespace.yaml
+  - config/p17-backend-config.yaml
+  - data/p17-uploads-pvc.yaml
+  - data/p17-mysql.yaml
+  - data/p17-mongodb.yaml
+  - data/p17-kafka.yaml
+  - apps/p17-student-service.yaml
+  - apps/p17-company-service.yaml
+  - apps/p17-job-service.yaml
+  - apps/p17-application-service.yaml
+  - apps/p17-event-service.yaml
+  - apps/p17-assistant-service.yaml
+  - apps/p17-frontend.yaml
+
+# Local images built by `docker compose build`. To deploy from a registry, change newName,
+# for example: kustomize edit set image p17-job-service=ghcr.io/<org>/p17-job-service:1.0
+images:
+  - {name: p17-student-service, newTag: latest}
+  - {name: p17-company-service, newTag: latest}
+  - {name: p17-job-service, newTag: latest}
+  - {name: p17-application-service, newTag: latest}
+  - {name: p17-event-service, newTag: latest}
+  - {name: p17-assistant-service, newTag: latest}
+  - {name: p17-frontend, newTag: latest}
