@@ -12,12 +12,10 @@ REPO_DIR = BACKEND_DIR.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from sqlalchemy import select  # noqa: E402
-from sqlalchemy.orm import Session  # noqa: E402
 
 from app.assistant.agent import AssistantRun  # noqa: E402
 from app.assistant.tools.schemas import AssistantContext, Message  # noqa: E402
-from app.models.account import Account  # noqa: E402
+from app.mongo import get_database  # noqa: E402,F401  (re-exported for the scripts)
 
 EVALUATION_DIR = REPO_DIR / "docs" / "evaluation"
 DEFAULT_STUDENT = "student001@seed.p17.example"
@@ -30,8 +28,9 @@ class TimedRun:
     seconds: float
 
 
-def student_context(db: Session, email: str) -> AssistantContext:
-    account_id = db.scalar(select(Account.id).where(Account.email == email))
+def student_context(db, email: str) -> AssistantContext:
+    account = db.accounts.find_one({"email": email}, {"_id": 1})
+    account_id = account["_id"] if account else None
     if account_id is None:
         raise SystemExit(f"No account {email}. Run the seed first.")
     return AssistantContext(account_id=account_id, role="student", db=db)

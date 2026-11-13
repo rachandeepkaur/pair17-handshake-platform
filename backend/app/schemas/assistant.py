@@ -11,7 +11,7 @@ class AssistantToolCallPayload(BaseModel):
 
 class AssistantConversationMessage(BaseModel):
     role: Literal["user", "assistant", "tool"]
-    content: str = Field(default="", max_length=4_000)
+    content: str = Field(default="", max_length=8_000)  # /memory lists can exceed 4k
     tool_name: str | None = Field(default=None, min_length=1, max_length=100)
     tool_calls: list[AssistantToolCallPayload] = Field(default_factory=list, max_length=10)
 

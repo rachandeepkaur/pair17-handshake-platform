@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from pymongo.database import Database
 
 from app.dependencies import get_current_user, get_db
-from app.models.account import Account
+from app.mongo import Doc as Account
 from app.schemas.common import Page
 from app.schemas.student import StudentProfileOut, StudentSummary
 from app.services import student_service
@@ -18,7 +18,7 @@ def search_students(
     major: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     _: Account = Depends(get_current_user),
 ) -> Page[StudentSummary]:
     return student_service.search_students(
@@ -29,7 +29,7 @@ def search_students(
 @router.get("/{student_id}", response_model=StudentProfileOut, summary="View a student's profile")
 def get_student(
     student_id: int,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     _: Account = Depends(get_current_user),
 ) -> StudentProfileOut:
     return student_service.get_student_profile(db, student_id)

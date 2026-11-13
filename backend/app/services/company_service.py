@@ -1,9 +1,9 @@
 from fastapi import UploadFile
-from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload
+from pymongo.database import Database
 
+from app.core.activity import log_activity
 from app.core.exceptions import NotFoundError
-from app.models.company import Company
+from app.mongo import Doc, doc, encode, utcnow
 from app.schemas.company import CompanyProfileOut, CompanyProfileUpdate
 from app.services import file_service
 
@@ -11,20 +11,20 @@ from app.services import file_service
 _PROFILE_FIELDS = ("company_name", "location", "description", "contact_info", "profile_picture_path")
 
 
-def get_company(db: Session, company_id: int) -> Company:
-    company = db.scalar(
-        select(Company).options(joinedload(Company.account)).where(Company.account_id == company_id)
-    )
+def get_company(db: Database, company_id: int) -> Doc:
+    company = doc(db.companies.find_one({"_id": company_id}))
     if company is None:
         raise NotFoundError("Company profile not found")
+    account = db.accounts.find_one({"_id": company_id}, {"email": 1})
+    company["email"] = account["email"] if account else ""
     return company
 
 
-def to_profile(company: Company) -> CompanyProfileOut:
+def to_profile(company: Doc) -> CompanyProfileOut:
     return CompanyProfileOut(
         account_id=company.account_id,
         company_name=company.company_name,
-        email=company.account.email,
+        email=company.email,
         location=company.location,
         description=company.description,
         contact_info=company.contact_info,
@@ -32,26 +32,26 @@ def to_profile(company: Company) -> CompanyProfileOut:
     )
 
 
-def profile_completion(company: Company) -> int:
-    filled = sum(1 for field in _PROFILE_FIELDS if getattr(company, field))
+def profile_completion(company: Doc) -> int:
+    filled = sum(1 for field in _PROFILE_FIELDS if company.get(field))
     return round(filled * 100 / len(_PROFILE_FIELDS))
 
 
-def update_profile(db: Session, company_id: int, payload: CompanyProfileUpdate) -> CompanyProfileOut:
+def update_profile(db: Database, company_id: int, payload: CompanyProfileUpdate) -> CompanyProfileOut:
     company = get_company(db, company_id)
-    for field, value in payload.model_dump().items():
-        setattr(company, field, value)
-    db.commit()
-    db.refresh(company)
-    return to_profile(company)
+    values = payload.model_dump()
+    db.companies.update_one({"_id": company_id}, {"$set": {**encode(values), "updated_at": utcnow()}})
+    if values.get("company_name") and values["company_name"] != company.company_name:
+        # Jobs and events carry a copy of the company name for search; keep it in step.
+        for collection in (db.jobs, db.events):
+            collection.update_many({"company_id": company_id}, {"$set": {"company_name": values["company_name"]}})
+    log_activity(db, company_id, "company.profile_updated", role="company", entity_type="company", entity_id=company_id)
+    return to_profile(get_company(db, company_id))
 
 
-async def update_picture(db: Session, company_id: int, upload: UploadFile) -> CompanyProfileOut:
+async def update_picture(db: Database, company_id: int, upload: UploadFile) -> CompanyProfileOut:
     company = get_company(db, company_id)
     new_path = await file_service.save_profile_picture(upload)
-    old_path = company.profile_picture_path
-    company.profile_picture_path = new_path
-    db.commit()
-    file_service.delete_upload(old_path)
-    db.refresh(company)
-    return to_profile(company)
+    db.companies.update_one({"_id": company_id}, {"$set": {"profile_picture_path": new_path, "updated_at": utcnow()}})
+    file_service.delete_upload(company.profile_picture_path)
+    return to_profile(get_company(db, company_id))

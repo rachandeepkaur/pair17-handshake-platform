@@ -25,7 +25,7 @@ from app.assistant.confirmation import (
     requires_confirmation,
 )
 from app.assistant.llm_client import MalformedToolCallError, ModelClient, ModelClientError, ModelTimeoutError
-from app.assistant.prompts import system_prompt_for_role
+from app.assistant.prompts import system_prompt_for_role, without_memory_commands
 from app.assistant.registry import tool_registry_for_role
 from app.assistant.repair import (
     MAX_REPAIR_ATTEMPTS,
@@ -219,8 +219,13 @@ class _Run:
         while self.iterations < self.max_iterations:
             self.iterations += 1
             model_messages = [
-                {"role": "system", "content": system_prompt_for_role(self.context.role, self.injection_defense)},
-                *message_history(self.history),
+                {
+                    "role": "system",
+                    "content": system_prompt_for_role(
+                        self.context.role, self.injection_defense, memory_prompt=self.context.memory_prompt
+                    ),
+                },
+                *without_memory_commands(message_history(self.history)),
                 *self.transient,
             ]
             self.transient = []

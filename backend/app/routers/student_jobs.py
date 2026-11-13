@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from pymongo.database import Database
 
 from app.dependencies import get_db, require_student
-from app.models.account import Account
+from app.mongo import Doc as Account
 from app.schemas.common import Page
 from app.schemas.student_job import StudentJobOut
 from app.services import student_job_service
@@ -18,7 +18,7 @@ def list_student_jobs(
     city: str | None = Query(default=None, max_length=100),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     _: Account = Depends(require_student),
 ) -> Page[StudentJobOut]:
     return student_job_service.list_jobs(
@@ -34,7 +34,7 @@ def list_student_jobs(
 @router.get("/{job_id}", response_model=StudentJobOut, summary="View an active job for students")
 def get_student_job(
     job_id: int,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     _: Account = Depends(require_student),
 ) -> StudentJobOut:
     return student_job_service.get_job(db, job_id)

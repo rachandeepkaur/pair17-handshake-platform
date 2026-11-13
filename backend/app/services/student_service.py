@@ -1,24 +1,18 @@
-from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session, joinedload
+from typing import Any
+
+from pymongo.database import Database
 
 from app.core.exceptions import NotFoundError
-from app.models.student import Student
+from app.mongo import Doc, contains, doc, docs
 from app.schemas.common import Page
 from app.schemas.student import StudentProfileOut, StudentSummary
 from app.services.file_service import picture_url
 
 
-def like_pattern(value: str) -> str:
-    """SQL LIKE pattern matching `value` anywhere, with wildcards escaped."""
-
-    escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    return f"%{escaped}%"
-
-
-def to_profile(student: Student) -> StudentProfileOut:
+def to_profile(student: Doc, email: str) -> StudentProfileOut:
     return StudentProfileOut(
         **StudentSummary.model_validate(student).model_dump(),
-        email=student.account.email,
+        email=email,
         date_of_birth=student.date_of_birth,
         state=student.state,
         country=student.country,
@@ -30,8 +24,15 @@ def to_profile(student: Student) -> StudentProfileOut:
     )
 
 
+def summaries_by_id(db: Database, student_ids: set[int]) -> dict[int, StudentSummary]:
+    """Batch-load student summaries (replaces the SQL joins)."""
+
+    rows = db.students.find({"_id": {"$in": list(student_ids)}})
+    return {row["_id"]: StudentSummary.model_validate(Doc(row)) for row in rows}
+
+
 def search_students(
-    db: Session,
+    db: Database,
     *,
     q: str | None = None,
     college: str | None = None,
@@ -40,21 +41,21 @@ def search_students(
     limit: int = 20,
     offset: int = 0,
 ) -> Page[StudentSummary]:
-    query = select(Student)
+    query: dict[str, Any] = {}
     if q:
-        query = query.where(Student.name.ilike(like_pattern(q)))
+        query["name"] = contains(q)
     if college:
-        query = query.where(Student.college_name.ilike(like_pattern(college)))
+        query["college_name"] = contains(college)
     if major:
-        query = query.where(Student.major.ilike(like_pattern(major)))
+        query["major"] = contains(major)
     if skills:
         # Comma-separated input matches students who have ANY of the skills.
         terms = [term.strip() for term in skills.split(",") if term.strip()]
         if terms:
-            query = query.where(or_(*(Student.skills.ilike(like_pattern(term)) for term in terms)))
+            query["$or"] = [{"skills": contains(term)} for term in terms]
 
-    total = db.scalar(select(func.count()).select_from(query.subquery()))
-    rows = db.scalars(query.order_by(Student.name).limit(limit).offset(offset)).all()
+    total = db.students.count_documents(query)
+    rows = docs(db.students.find(query).sort([("name", 1), ("_id", 1)]).skip(offset).limit(limit))
     return Page[StudentSummary](
         items=[StudentSummary.model_validate(row) for row in rows],
         total=total,
@@ -63,10 +64,9 @@ def search_students(
     )
 
 
-def get_student_profile(db: Session, student_id: int) -> StudentProfileOut:
-    student = db.scalar(
-        select(Student).options(joinedload(Student.account)).where(Student.account_id == student_id)
-    )
+def get_student_profile(db: Database, student_id: int) -> StudentProfileOut:
+    student = doc(db.students.find_one({"_id": student_id}))
     if student is None:
         raise NotFoundError("Student not found")
-    return to_profile(student)
+    account = db.accounts.find_one({"_id": student_id}, {"email": 1})
+    return to_profile(student, account["email"] if account else "")

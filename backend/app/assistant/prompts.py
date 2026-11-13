@@ -48,12 +48,30 @@ tool did not return."""
 COMPANY_UNAVAILABLE_PROMPT = "company prompt goes here"
 
 
-def system_prompt_for_role(role: str, injection_defense: bool = True) -> str:
+def without_memory_commands(history: list[dict]) -> list[dict]:
+    """Drop /memory commands and their direct replies: they are UI exchanges, not conversation."""
+
+    kept, skip_reply = [], False
+    for message in history:
+        if message.get("role") == "user" and str(message.get("content", "")).strip().startswith("/memory"):
+            skip_reply = True
+            continue
+        if skip_reply and message.get("role") == "assistant" and not message.get("tool_calls"):
+            skip_reply = False
+            continue
+        skip_reply = False
+        kept.append(message)
+    return kept
+
+
+def system_prompt_for_role(role: str, injection_defense: bool = True, memory_prompt: str = "") -> str:
     if role != "student":
         return COMPANY_UNAVAILABLE_PROMPT
     prompt = STUDENT_SYSTEM_PROMPT
     if injection_defense:
         prompt = f"{prompt}\n\n{UNTRUSTED_DATA_RULES}"
+    if memory_prompt:
+        prompt = f"{prompt}\n\n{memory_prompt}"
     today = date.today()
     first = (today.replace(day=1) + timedelta(days=32)).replace(day=1)
     last = (first + timedelta(days=32)).replace(day=1) - timedelta(days=1)

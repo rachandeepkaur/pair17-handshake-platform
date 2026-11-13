@@ -14,10 +14,7 @@ import urllib.request
 from collections.abc import Callable
 from typing import Any
 
-from sqlalchemy import text
-
 from app.config import settings
-from app.database import engine
 
 Check = dict[str, Any]
 
@@ -34,25 +31,14 @@ def _timed(probe: Callable[[], str | None]) -> Check:
     return check
 
 
-def check_mysql() -> Check:
-    def probe() -> None:
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
-
-    return _timed(probe)
-
-
 def check_mongodb() -> Check:
-    def probe() -> str:
-        from pymongo import MongoClient
+    """Ping MongoDB, the platform's system of record, through the shared client."""
 
-        timeout_ms = int(settings.health_timeout_seconds * 1000)
-        client = MongoClient(settings.mongo_uri, serverSelectionTimeoutMS=timeout_ms, connectTimeoutMS=timeout_ms)
-        try:
-            client.admin.command("ping")
-            return f"database={settings.mongo_db}"
-        finally:
-            client.close()
+    def probe() -> str:
+        from app.mongo import get_client
+
+        get_client().admin.command("ping", maxTimeMS=int(settings.health_timeout_seconds * 1000))
+        return f"database={settings.mongo_db}"
 
     return _timed(probe)
 
@@ -91,14 +77,12 @@ def check_http(url: str) -> Check:
 def run_checks(*, include_platform: bool = False, include_ollama: bool = False) -> tuple[bool, dict[str, Check]]:
     """Return (healthy, checks).
 
-    Required: MySQL, plus MongoDB and Kafka when configured. Platform services
+    Required: MongoDB, plus Kafka when configured. Platform services
     and Ollama are reported but optional, so the assistant stays healthy (and
     can answer with a clear error) while a sibling restarts or Ollama is off.
     """
 
-    required: dict[str, Check] = {"mysql": check_mysql()}
-    if settings.mongo_uri:
-        required["mongodb"] = check_mongodb()
+    required: dict[str, Check] = {"mongodb": check_mongodb()}
     if settings.kafka_bootstrap_servers:
         required["kafka"] = check_kafka()
 

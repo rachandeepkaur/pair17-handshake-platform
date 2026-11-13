@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 from pathlib import Path
 
@@ -53,8 +54,9 @@ async def save_profile_picture(upload: UploadFile) -> str:
     return f"profile_pictures/{filename}"
 
 
-async def save_resume(upload: UploadFile) -> str:
-    """Validate and store a PDF resume; return its path relative to UPLOAD_ROOT."""
+async def save_resume(upload: UploadFile) -> dict:
+    """Validate and store a PDF resume; return its metadata (path relative to UPLOAD_ROOT,
+    original filename, size, SHA-256, content type), which is kept in MongoDB."""
 
     data = await upload.read(MAX_RESUME_BYTES + 1)
     if not data:
@@ -67,7 +69,13 @@ async def save_resume(upload: UploadFile) -> str:
     ensure_upload_dirs()
     filename = f"{uuid.uuid4().hex}.pdf"
     (RESUME_DIR / filename).write_bytes(data)
-    return f"resumes/{filename}"
+    return {
+        "path": f"resumes/{filename}",
+        "original_filename": (upload.filename or "resume.pdf")[:255],
+        "size_bytes": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "content_type": "application/pdf",
+    }
 
 
 def delete_upload(relative_path: str | None) -> None:

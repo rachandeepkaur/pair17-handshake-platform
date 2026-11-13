@@ -2,12 +2,12 @@
 
 from typing import Any
 
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from pymongo.errors import DuplicateKeyError
 
 from app.assistant.tools.schemas import AssistantContext, ToolDefinition
 from app.core.exceptions import AppError
-from app.models.saved_item import SavedItem
+from app.core.activity import log_activity
+from app.mongo import next_id, utcnow
 from app.services import student_event_service, student_job_service
 
 
@@ -16,7 +16,6 @@ def save_job_or_event(context: AssistantContext, arguments: dict[str, Any]) -> s
 
     if context.db is None:
         return "Saving is unavailable."
-
     item_type = arguments.get("item_type")
     item_id = arguments.get("item_id")
     if item_type not in {"job", "event"}:
@@ -25,28 +24,30 @@ def save_job_or_event(context: AssistantContext, arguments: dict[str, Any]) -> s
         return "item_id must be a positive integer."
 
     try:
-        existing = context.db.scalar(
-            select(SavedItem.id).where(
-                SavedItem.student_id == context.account_id,
-                SavedItem.item_type == item_type,
-                SavedItem.item_id == item_id,
-            )
+        existing = context.db.saved_items.find_one(
+            {"student_id": context.account_id, "item_type": item_type, "item_id": item_id}, {"_id": 1}
         )
         if existing is not None:
             return f"{item_type.capitalize()} {item_id} is already saved."
+
         visibility_error = _visibility_error(context, item_type, item_id)
         if visibility_error:
             return visibility_error
 
-        context.db.add(SavedItem(student_id=context.account_id, item_type=item_type, item_id=item_id))
-        context.db.commit()
-    except IntegrityError:
-        _rollback_safely(context)
+        context.db.saved_items.insert_one(
+            {
+                "_id": next_id(context.db, "saved_items"),
+                "student_id": context.account_id,
+                "item_type": item_type,
+                "item_id": item_id,
+                "saved_at": utcnow(),
+            }
+        )
+        log_activity(context.db, context.account_id, "item.saved", role="student", entity_type=item_type, entity_id=item_id)
+    except DuplicateKeyError:
         return f"{item_type.capitalize()} {item_id} is already saved."
     except Exception:
-        _rollback_safely(context)
         return f"{item_type.capitalize()} {item_id} could not be saved."
-
     return f"Saved {item_type} {item_id} for this student."
 
 
@@ -59,13 +60,6 @@ def _visibility_error(context: AssistantContext, item_type: str, item_id: int) -
     except AppError:
         return f"{item_type.capitalize()} {item_id} was not found."
     return None
-
-
-def _rollback_safely(context: AssistantContext) -> None:
-    try:
-        context.db.rollback()
-    except Exception:
-        pass
 
 
 TOOL = ToolDefinition(

@@ -12,10 +12,7 @@ data:
   SEED: "17"
   CITY_SET: Palo Alto,Mountain View,Menlo Park
   # Kubernetes service discovery: short Service names resolve inside the p17-handshake namespace.
-  DB_HOST: p17-mysql
-  DB_PORT: "3306"
-  DB_NAME: p17_handshake
-  DB_USER: p17_app
+  # MongoDB is the system of record (MySQL was migrated away in Lab 2).
   MONGO_HOST: p17-mongodb:27017
   MONGO_USER: p17_admin
   MONGO_DB: p17_handshake

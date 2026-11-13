@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-# Pair 17 Kafka worker image. One image, three consumers, selected by the command:
-#   python -m app.workers.application_worker | event_worker | job_worker
+# Pair 17 Kafka worker image. One image, four consumers, selected by the command:
+#   python -m app.workers.application_worker | event_worker | job_worker | memory_worker
 # Build context: backend/   ->   docker build -f docker/worker/Dockerfile -t p17-kafka-worker backend
 FROM python:3.11-slim
 
@@ -16,8 +16,10 @@ RUN pip install -r /tmp/requirements.txt && rm /tmp/requirements.txt
 
 RUN useradd --system --uid 10017 --no-create-home p17
 
-# Only the packages the workers import.
-COPY app/__init__.py app/config.py ./app/
+# Only the modules the workers import (no web, auth, or service code).
+COPY app/__init__.py app/config.py app/mongo.py ./app/
+COPY app/core/__init__.py app/core/activity.py ./app/core/
+COPY app/assistant/__init__.py app/assistant/memory.py app/assistant/consolidation.py ./app/assistant/
 COPY app/events ./app/events
 COPY app/workers ./app/workers
 

@@ -1,82 +1,71 @@
-from datetime import date
+from pymongo.database import Database
 
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session, joinedload
-
+from app.core.activity import log_activity
 from app.core.exceptions import NotFoundError
-from app.models.event import Event
-from app.models.registration import Registration
+from app.mongo import Doc, doc, docs, encode, next_id, today_iso, utcnow
 from app.schemas.event import EventCreate, EventOut, RegistrationOut
-from app.schemas.student import StudentSummary
+from app.services import student_service
 
 
-def _to_out(event: Event, registration_count: int) -> EventOut:
+def _to_out(event: Doc, registration_count: int) -> EventOut:
     return EventOut.model_validate(event).model_copy(update={"registration_count": registration_count})
 
 
-def create_event(db: Session, company_id: int, payload: EventCreate) -> EventOut:
-    event = Event(company_id=company_id, **payload.model_dump())
-    db.add(event)
-    db.commit()
-    db.refresh(event)
-    return _to_out(event, 0)
+def registration_counts(db: Database, event_ids: list[int]) -> dict[int, int]:
+    rows = db.registrations.aggregate(
+        [{"$match": {"event_id": {"$in": event_ids}}}, {"$group": {"_id": "$event_id", "n": {"$sum": 1}}}]
+    )
+    return {row["_id"]: row["n"] for row in rows}
 
 
-def get_owned_event(db: Session, company_id: int, event_id: int) -> Event:
-    event = db.get(Event, event_id)
+def create_event(db: Database, company_id: int, payload: EventCreate) -> EventOut:
+    company = db.companies.find_one({"_id": company_id}, {"company_name": 1})
+    event_id = next_id(db, "events")
+    db.events.insert_one(
+        {
+            "_id": event_id,
+            "company_id": company_id,
+            "company_name": company["company_name"] if company else None,
+            **encode(payload.model_dump()),
+            "created_at": utcnow(),
+        }
+    )
+    log_activity(db, company_id, "event.created", role="company", entity_type="event", entity_id=event_id)
+    return _to_out(get_owned_event(db, company_id, event_id), 0)
+
+
+def get_owned_event(db: Database, company_id: int, event_id: int) -> Doc:
+    event = doc(db.events.find_one({"_id": event_id}))
     if event is None or event.company_id != company_id:
         raise NotFoundError("Event not found")
     return event
 
 
-def get_event_out(db: Session, company_id: int, event_id: int) -> EventOut:
+def get_event_out(db: Database, company_id: int, event_id: int) -> EventOut:
     event = get_owned_event(db, company_id, event_id)
-    count = db.scalar(select(func.count(Registration.id)).where(Registration.event_id == event.id))
-    return _to_out(event, count)
+    return _to_out(event, db.registrations.count_documents({"event_id": event.id}))
 
 
-def list_company_events(db: Session, company_id: int) -> list[EventOut]:
-    counts = (
-        select(Registration.event_id, func.count(Registration.id).label("n"))
-        .group_by(Registration.event_id)
-        .subquery()
-    )
-    rows = db.execute(
-        select(Event, func.coalesce(counts.c.n, 0))
-        .outerjoin(counts, counts.c.event_id == Event.id)
-        .where(Event.company_id == company_id)
-        .order_by(Event.event_date, Event.event_time)
-    ).all()
-    return [_to_out(event, count) for event, count in rows]
+def list_company_events(db: Database, company_id: int) -> list[EventOut]:
+    events = docs(db.events.find({"company_id": company_id}).sort([("event_date", 1), ("event_time", 1), ("_id", 1)]))
+    counts = registration_counts(db, [event.id for event in events])
+    return [_to_out(event, counts.get(event.id, 0)) for event in events]
 
 
-def list_registrations(db: Session, company_id: int, event_id: int) -> list[RegistrationOut]:
+def list_registrations(db: Database, company_id: int, event_id: int) -> list[RegistrationOut]:
     get_owned_event(db, company_id, event_id)
-    rows = db.scalars(
-        select(Registration)
-        .options(joinedload(Registration.student))
-        .where(Registration.event_id == event_id)
-        .order_by(Registration.registered_at.desc())
-    ).all()
+    rows = docs(db.registrations.find({"event_id": event_id}).sort([("registered_at", -1), ("_id", -1)]))
+    students = student_service.summaries_by_id(db, {row.student_id for row in rows})
     return [
-        RegistrationOut(
-            id=row.id,
-            registered_at=row.registered_at,
-            student=StudentSummary.model_validate(row.student),
-        )
+        RegistrationOut(id=row.id, registered_at=row.registered_at, student=students[row.student_id])
         for row in rows
+        if row.student_id in students
     ]
 
 
-def count_upcoming_events(db: Session, company_id: int) -> int:
-    return db.scalar(
-        select(func.count(Event.id)).where(Event.company_id == company_id, Event.event_date >= date.today())
-    )
+def count_upcoming_events(db: Database, company_id: int) -> int:
+    return db.events.count_documents({"company_id": company_id, "event_date": {"$gte": today_iso()}})
 
 
-def count_registrations(db: Session, company_id: int) -> int:
-    return db.scalar(
-        select(func.count(Registration.id))
-        .join(Event, Event.id == Registration.event_id)
-        .where(Event.company_id == company_id)
-    )
+def count_registrations(db: Database, company_id: int) -> int:
+    return db.registrations.count_documents({"company_id": company_id})

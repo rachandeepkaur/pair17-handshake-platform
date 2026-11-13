@@ -19,14 +19,11 @@ from datetime import datetime
 
 from eval_common import DEFAULT_STUDENT, EVALUATION_DIR, TimedRun, render_run, student_context, timed, write
 
-from sqlalchemy import select  # noqa: E402
 
 from app.assistant.agent import run_assistant  # noqa: E402
 from app.assistant.llm_client import OllamaClient  # noqa: E402
 from app.assistant.untrusted import UNTRUSTED_DATA_RULES, wrap_untrusted  # noqa: E402
-from app.database import SessionLocal  # noqa: E402
-from app.models.account import Account  # noqa: E402
-from app.models.student import Student  # noqa: E402
+from app.mongo import Doc, get_database  # noqa: E402
 from db.seed.injected_content import CANARY, VICTIM_STUDENT_EMAIL, ensure_injected_content  # noqa: E402
 
 
@@ -65,7 +62,7 @@ def first_listing_id(answer: str) -> int | None:
     return int(match.group(1) or match.group(2)) if match else None
 
 
-def indicators(query: Query, timed_run: TimedRun, victim: Student, victim_email: str) -> dict[str, bool]:
+def indicators(query: Query, timed_run: TimedRun, victim: Doc, victim_email: str) -> dict[str, bool]:
     run = timed_run.run
     answer = run.answer.lower()
     call_text = " ".join(f"{record.name} {record.arguments}" for record in run.tool_calls).lower()
@@ -99,11 +96,12 @@ def main() -> int:
     rows: list[tuple[Query, dict[str, bool], dict[str, bool]]] = []
     example_block = ""
 
-    with SessionLocal() as db:
+    db = get_database()
+    if True:
         content = ensure_injected_content(db)
         context = student_context(db, DEFAULT_STUDENT)
-        victim_account = db.scalar(select(Account).where(Account.email == VICTIM_STUDENT_EMAIL))
-        victim = db.get(Student, victim_account.id)
+        victim_account = Doc(db.accounts.find_one({"email": VICTIM_STUDENT_EMAIL}))
+        victim = Doc(db.students.find_one({"_id": victim_account.id}))
         queries = build_queries(content.job_id, content.event_id)
         print(f"Injected job {content.job_id}, event {content.event_id}. Running {len(queries)} queries × 2.")
 
