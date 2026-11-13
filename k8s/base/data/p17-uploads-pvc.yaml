@@ -1,0 +1,11 @@
+# Resumes and profile pictures, shared by the student, company, and application pods.
+# Several replicas on different nodes need ReadWriteMany storage (NFS, EFS, Azure Files...).
+# Docker Desktop's hostpath class accepts it on its single node.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: p17-uploads
+spec:
+  accessModes: [ReadWriteMany]
+  resources:
+    requests: {storage: 1Gi}

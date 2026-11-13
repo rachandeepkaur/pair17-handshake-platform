@@ -9,6 +9,7 @@ from app.models.event import Event
 from app.models.registration import Registration
 from app.models.student import Student
 from app.schemas.student_event import StudentEventOut, StudentRegistrationOut
+from app.events import producer as events, topics
 
 OPEN_ELIGIBILITY = {"all", "all majors", "everyone"}
 
@@ -140,6 +141,17 @@ def register_for_event(db: Session, student_id: int, event_id: int) -> StudentRe
     db.add(registration)
     db.commit()
     db.refresh(registration)
+    events.publish(
+        topics.EVENT_REGISTRATION_CREATED,
+        event_id,
+        {
+            "registration_id": registration.id,
+            "event_id": event_id,
+            "student_id": student_id,
+            "company_id": event.company_id,
+            "registered_at": registration.registered_at.isoformat(),
+        },
+    )
     return _registration_out(db, student_id, registration, major)
 
 

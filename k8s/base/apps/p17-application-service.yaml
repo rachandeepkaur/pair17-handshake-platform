@@ -1,0 +1,100 @@
+# p17-application-service: job applications and resumes.
+# Reached by other pods at http://p17-application-service:9174 (Kubernetes service discovery).
+apiVersion: v1
+kind: Service
+metadata:
+  name: p17-application-service
+  labels: {app.kubernetes.io/name: p17-application-service, app.kubernetes.io/component: backend}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: p17-application-service}
+  ports:
+    - name: http
+      port: 9174
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: p17-application-service
+  labels: {app.kubernetes.io/name: p17-application-service, app.kubernetes.io/component: backend}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app.kubernetes.io/name: p17-application-service}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: p17-application-service, app.kubernetes.io/component: backend}
+    spec:
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10017  # the image's p17 user
+        runAsGroup: 10017
+        fsGroup: 10017
+      containers:
+        - name: application
+          image: p17-application-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - {name: http, containerPort: 9174}
+          envFrom:
+            - configMapRef: {name: p17-backend-config}
+          env:
+            - {name: SERVICE_NAME, value: application}
+            - {name: PORT, value: "9174"}
+            - name: DB_PASSWORD
+              valueFrom: {secretKeyRef: {name: p17-handshake-secrets, key: DB_PASSWORD}}
+            - name: MONGO_PASSWORD
+              valueFrom: {secretKeyRef: {name: p17-handshake-secrets, key: MONGO_PASSWORD}}
+            - name: JWT_SECRET
+              valueFrom: {secretKeyRef: {name: p17-handshake-secrets, key: JWT_SECRET}}
+            # Assembled in the pod from the ConfigMap and Secret; no password in the manifest.
+            - name: MONGO_URI
+              value: mongodb://$(MONGO_USER):$(MONGO_PASSWORD)@$(MONGO_HOST)/?authSource=admin
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          # Ready only when MySQL, MongoDB, and Kafka are reachable (503 otherwise).
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # Restart only if the process itself stops answering, not when a dependency is down.
+          livenessProbe:
+            httpGet: {path: /health/live, port: http}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests: {cpu: 100m, memory: 192Mi}
+            limits: {cpu: "500m", memory: 512Mi}
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+      volumes:
+        - name: uploads
+          persistentVolumeClaim: {claimName: p17-uploads}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: p17-application-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: p17-application-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 70}
