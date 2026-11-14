@@ -11,6 +11,7 @@ from app.schemas.application import ApplicationDetailOut, ApplicationOut
 from app.schemas.student import StudentSummary
 from app.services import file_service, student_service
 from app.services.job_service import get_owned_job
+from app.events import producer as events, topics
 
 
 def _to_out(application: Application) -> ApplicationOut:
@@ -79,9 +80,22 @@ def get_application_detail(db: Session, company_id: int, application_id: int) ->
 
 def update_status(db: Session, company_id: int, application_id: int, status: str) -> ApplicationOut:
     application = get_owned_application(db, company_id, application_id)
+    old_status = application.status
     application.status = status
     db.commit()
     db.refresh(application)
+    data = {
+        "application_id": application.id,
+        "job_id": application.job_id,
+        "student_id": application.student_id,
+        "company_id": company_id,
+        "old_status": old_status,
+        "new_status": application.status,
+        "updated_at": application.updated_at.isoformat(),
+    }
+    events.publish(topics.APPLICATION_UPDATED, application.id, {**data, "changed_fields": ["status"]})
+    if old_status != application.status:
+        events.publish(topics.APPLICATION_STATUS_CHANGED, application.id, data)
     return _to_out(application)
 
 

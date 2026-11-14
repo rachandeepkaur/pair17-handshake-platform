@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     platform_service_urls: str = ""
     health_timeout_seconds: float = 2.0
 
+    # Kafka producers (API services) and consumers (workers).
+    kafka_publish_timeout_seconds: float = 5.0
+    worker_max_attempts: int = 3
+    worker_retry_backoff_seconds: float = 0.5
+    # Demo hook for the crash test: sleep between the database write and the offset commit.
+    worker_pause_after_write_seconds: float = 0.0
+    worker_heartbeat_file: str = "/tmp/p17-worker-heartbeat"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

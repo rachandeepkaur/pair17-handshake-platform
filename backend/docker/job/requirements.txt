@@ -1,1 +1,3 @@
 -r requirements-base.txt
+# Kafka producer for the job events this service publishes.
+confluent-kafka==2.6.1

@@ -1,0 +1,33 @@
+# Creates the five event topics and their dead-letter twins (3 partitions each).
+# Idempotent (--if-not-exists); retries while the broker is still starting.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: p17-kafka-topics
+  labels: {app.kubernetes.io/name: p17-kafka-topics}
+spec:
+  backoffLimit: 10
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: p17-kafka-topics}
+    spec:
+      restartPolicy: OnFailure
+      enableServiceLinks: false
+      containers:
+        - name: create-topics
+          image: apache/kafka:3.8.0
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -e
+              for t in application.created application.updated application.status_changed event.registration_created job.created; do
+                for name in "$t" "$t.dlq"; do
+                  /opt/kafka/bin/kafka-topics.sh --bootstrap-server p17-kafka:9092 --create --if-not-exists \
+                    --topic "$name" --partitions 3 --replication-factor 1
+                done
+              done
+              /opt/kafka/bin/kafka-topics.sh --bootstrap-server p17-kafka:9092 --list
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: 500m, memory: 512Mi}

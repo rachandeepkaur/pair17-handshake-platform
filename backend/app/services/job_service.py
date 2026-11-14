@@ -7,6 +7,7 @@ from app.core.exceptions import NotFoundError
 from app.models.application import Application
 from app.models.job import Job
 from app.schemas.job import JobCreate, JobOut
+from app.events import producer as events, topics
 
 
 def _to_out(job: Job, applicant_count: int) -> JobOut:
@@ -18,6 +19,24 @@ def create_job(db: Session, company_id: int, payload: JobCreate) -> JobOut:
     db.add(job)
     db.commit()
     db.refresh(job)
+    events.publish(
+        topics.JOB_CREATED,
+        job.id,
+        {
+            "job_id": job.id,
+            "company_id": company_id,
+            "title": job.title,
+            "description": job.description,
+            "category": job.category,
+            "city": job.city,
+            "location": job.location,
+            "is_remote": job.is_remote,
+            "salary": str(job.salary) if job.salary is not None else None,
+            "skills_required": job.skills_required,
+            "posting_date": job.posting_date.isoformat(),
+            "deadline": job.deadline.isoformat(),
+        },
+    )
     return _to_out(job, 0)
 
 

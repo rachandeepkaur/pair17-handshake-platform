@@ -1,0 +1,68 @@
+# p17-frontend: React build + nginx gateway that routes /api/* to the backend Services.
+# Exposed outside the cluster as a LoadBalancer on port 9170 (Docker Desktop maps it to
+# localhost:9170; on other clusters use `kubectl port-forward` or an Ingress).
+apiVersion: v1
+kind: Service
+metadata:
+  name: p17-frontend
+  labels: {app.kubernetes.io/name: p17-frontend, app.kubernetes.io/component: frontend}
+spec:
+  type: LoadBalancer
+  selector: {app.kubernetes.io/name: p17-frontend}
+  ports:
+    - name: http
+      port: 9170
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: p17-frontend
+  labels: {app.kubernetes.io/name: p17-frontend, app.kubernetes.io/component: frontend}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app.kubernetes.io/name: p17-frontend}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: p17-frontend, app.kubernetes.io/component: frontend}
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: frontend
+          image: p17-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - {name: http, containerPort: 80}
+          envFrom:
+            - configMapRef: {name: p17-frontend-config}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 250m, memory: 128Mi}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: p17-frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: p17-frontend
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 70}

@@ -12,7 +12,10 @@ ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 
 FROM nginx:1.27-alpine
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+# Rendered to /etc/nginx/conf.d/default.conf at start (see the template header).
+COPY docker/default.conf.template /etc/nginx/templates/default.conf.template
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
+    P17_SERVICE_SUFFIX=""
 COPY --from=build /web/dist /usr/share/nginx/html
 EXPOSE 80
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \

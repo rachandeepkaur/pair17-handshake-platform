@@ -1,3 +1,5 @@
 -r requirements-base.txt
 # Resume uploads (multipart/form-data).
 python-multipart==0.0.9
+# Kafka producer for the application events this service publishes.
+confluent-kafka==2.6.1

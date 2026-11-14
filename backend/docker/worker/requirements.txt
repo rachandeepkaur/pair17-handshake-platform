@@ -1,0 +1,5 @@
+# Kafka consumer workers: no web server, ORM, or auth libraries.
+confluent-kafka==2.6.1
+pymongo==4.10.1
+pydantic==2.9.2
+pydantic-settings==2.5.2
