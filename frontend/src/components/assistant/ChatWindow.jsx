@@ -76,8 +76,9 @@ export default function ChatWindow({ chat, heightClass = 'h-[28rem]', showSugges
       </div>
 
       <div className={`border-t px-4 py-2 text-xs ${tokenUsage.context_percentage >= 70 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-gray-100 text-gray-500'}`}>
-        Prompt {tokenUsage.prompt_tokens} · Response {tokenUsage.completion_tokens} · Total {tokenUsage.total_tokens} · Context {tokenUsage.context_percentage}%
-        {tokenUsage.context_percentage >= 70 && ' — context is above 70%; compact the conversation soon.'}
+        Prompt {tokenUsage.prompt_tokens} · Response {tokenUsage.completion_tokens} · Total {tokenUsage.total_tokens} · {tokenUsage.context_is_estimate ? 'Estimated context' : 'Context'} {tokenUsage.context_percentage}%
+        {tokenUsage.compacted && ` — compacted from ${tokenUsage.before_compaction_tokens} measured tokens to about ${tokenUsage.after_compaction_estimate} summary tokens.`}
+        {tokenUsage.context_percentage >= 70 && !tokenUsage.compacted && ' — context is above 70%; type /compact to compact the conversation.'}
       </div>
 
       <form

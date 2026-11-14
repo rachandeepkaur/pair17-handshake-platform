@@ -203,6 +203,10 @@ python backend/evaluation/agent_harness.py           # Lab 2: deterministic guar
 `run_injection_eval.py` adds one job and one event with injected instructions. Remove them with
 `python backend/db/seed/injected_content.py --remove`.
 
+### Assistant context compaction
+
+The assistant automatically compacts a conversation after a model call reaches 70% of the configured context window. A student can also type `/compact` in the assistant chat. The UI reports measured pre-compaction prompt tokens and the estimated token count of the compacted summary.
+
 ## Quick smoke test
 
 1. Start the backend and frontend as above.

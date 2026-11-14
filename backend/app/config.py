@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     ollama_timeout_seconds: float = 360.0
     # Tool schemas + system prompt take ~1.2k tokens; 8k leaves room for follow-ups.
     ollama_num_ctx: int = 8192
+    assistant_compaction_threshold_percent: float = 70.0
 
     # Containerized deployment (Lab 2). Defaults keep the local monolith working.
     service_name: str = "monolith"

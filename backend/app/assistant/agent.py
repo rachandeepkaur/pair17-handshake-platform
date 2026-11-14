@@ -75,6 +75,10 @@ class TokenUsage:
     total_tokens: int = 0
     context_percentage: float = 0
     inference_calls: int = 0
+    context_is_estimate: bool = False
+    compacted: bool = False
+    before_compaction_tokens: int = 0
+    after_compaction_estimate: int = 0
 
 
 @dataclass(frozen=True)

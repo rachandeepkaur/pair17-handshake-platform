@@ -77,6 +77,10 @@ class AssistantTokenUsage(BaseModel):
     total_tokens: int = Field(ge=0)
     context_percentage: float = Field(ge=0)
     inference_calls: int = Field(ge=0)
+    context_is_estimate: bool
+    compacted: bool
+    before_compaction_tokens: int = Field(ge=0)
+    after_compaction_estimate: int = Field(ge=0)
 
 
 class AssistantChatResponse(BaseModel):
