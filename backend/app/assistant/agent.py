@@ -13,6 +13,7 @@ stops at a final answer or after `max_iterations` model calls. Part C adds:
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from time import perf_counter
 from typing import Any
 
 from app.assistant.confirmation import (
@@ -40,6 +41,7 @@ from app.assistant.repair import (
     tool_error_reprompt,
     unparsable_call_reprompt,
 )
+from app.assistant.tracing import log_timing
 from app.assistant.tools.schemas import AssistantContext, AssistantMessage, Message, ToolCall, ToolRegistry, message_history
 from app.assistant.untrusted import wrap_untrusted
 from app.config import settings
@@ -108,6 +110,7 @@ def run_assistant(
     auto_approve: bool = False,
     injection_defense: bool = True,
     repair: bool = True,
+    trace_id: str = "",
 ) -> AssistantRun:
     """Run tools requested by the model until it produces a final answer.
 
@@ -126,6 +129,7 @@ def run_assistant(
         history, context, client, selected_registry,
         user_message=user_message, max_iterations=max_iterations,
         auto_approve=auto_approve, injection_defense=injection_defense, repair=repair,
+        trace_id=trace_id,
     )
 
     if not selected_registry.tools and selected_registry.unavailable_message:
@@ -143,6 +147,7 @@ def resume_assistant(
     max_iterations: int = MAX_ASSISTANT_ITERATIONS,
     injection_defense: bool = True,
     repair: bool = True,
+    trace_id: str = "",
 ) -> AssistantRun:
     """Continue a run that paused on a gated tool, using the student's decision."""
 
@@ -156,6 +161,7 @@ def resume_assistant(
         history, context, client, selected_registry,
         user_message=None, max_iterations=max_iterations,
         auto_approve=False, injection_defense=injection_defense, repair=repair,
+        trace_id=trace_id,
     )
     pending = run.run_tool_calls(unresolved, student_decision=approved)
     if pending:
@@ -208,6 +214,7 @@ class _Run:
         auto_approve: bool,
         injection_defense: bool,
         repair: bool,
+        trace_id: str,
     ) -> None:
         self.history = history
         self.context = context
@@ -218,6 +225,7 @@ class _Run:
         self.auto_approve = auto_approve
         self.injection_defense = injection_defense
         self.repair = repair
+        self.trace_id = trace_id
 
         self.iterations = 0
         self.tool_call_count = 0
@@ -243,6 +251,7 @@ class _Run:
                 *self.transient,
             ]
             self.transient = []
+            model_started_at = perf_counter()
             try:
                 assistant_message = self.client.complete(model_messages, self.registry.tools)
             except ModelTimeoutError:
@@ -256,6 +265,9 @@ class _Run:
                 return self.finish(MODEL_UNAVAILABLE_MESSAGE, record=True)
             except ModelClientError:
                 return self.finish(MODEL_UNAVAILABLE_MESSAGE, record=True)
+
+            if self.trace_id:
+                log_timing(self.trace_id, "model", model_started_at, iteration=self.iterations)
 
             self.record_token_usage(assistant_message)
 
@@ -372,7 +384,10 @@ class _Run:
             self.failures.append(status)
 
     def execute(self, tool_name: str, arguments: dict[str, Any]) -> None:
+        tool_started_at = perf_counter()
         result = self.registry.run(tool_name, self.context, arguments)
+        if self.trace_id:
+            log_timing(self.trace_id, "tool", tool_started_at, tool=tool_name)
         if self.injection_defense:
             result = wrap_untrusted(tool_name, result)
         self.add_tool_result(tool_name, result)

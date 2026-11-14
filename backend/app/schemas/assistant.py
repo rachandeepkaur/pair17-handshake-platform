@@ -90,3 +90,4 @@ class AssistantChatResponse(BaseModel):
     stopped_at_iteration_limit: bool
     pending_action: AssistantPendingAction | None = None
     token_usage: AssistantTokenUsage
+    trace_id: str = Field(min_length=1, max_length=64)
