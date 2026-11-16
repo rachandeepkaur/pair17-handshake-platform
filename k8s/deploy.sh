@@ -3,6 +3,7 @@
 #
 #   k8s/deploy.sh            # create secrets (first run), apply manifests, wait for rollout
 #   k8s/deploy.sh --seed     # also run the demo-data seed Job
+#   KUSTOMIZE_DIR=k8s/overlays/aws k8s/deploy.sh --seed   # EKS (overlay from k8s/aws/make-overlay.sh)
 #
 # Secrets never live in committed manifests: they are read from k8s/secrets.env
 # (git-ignored). On first run that file is generated with random values.
@@ -11,6 +12,13 @@ cd "$(dirname "$0")/.."
 
 NS=p17-handshake
 SECRETS_FILE=k8s/secrets.env
+KUSTOMIZE_DIR=${KUSTOMIZE_DIR:-k8s/base}
+
+# Fail before touching the cluster if the overlay was not generated.
+if [[ ! -f $KUSTOMIZE_DIR/kustomization.yaml ]]; then
+  echo "No kustomization in $KUSTOMIZE_DIR. For EKS run k8s/aws/make-overlay.sh first." >&2
+  exit 1
+fi
 
 if [[ ! -f $SECRETS_FILE ]]; then
   umask 077
@@ -28,7 +36,11 @@ kubectl -n "$NS" create secret generic p17-handshake-secrets \
   --from-env-file="$SECRETS_FILE" --dry-run=client -o yaml | kubectl apply -f -
 
 
-kubectl apply -k k8s/base
+SEED_IMAGE=${SEED_IMAGE:-}
+if [[ -z $SEED_IMAGE && -f $KUSTOMIZE_DIR/seed-image.env ]]; then
+  SEED_IMAGE=$(sed -n 's/^SEED_IMAGE=//p' "$KUSTOMIZE_DIR/seed-image.env")
+fi
+kubectl apply -k "$KUSTOMIZE_DIR"
 
 echo "Waiting for data stores..."
 for sts in p17-mongodb p17-kafka; do
@@ -44,8 +56,12 @@ done
 
 if [[ ${1:-} == --seed ]]; then
   kubectl -n "$NS" delete job p17-db-seed --ignore-not-found
-  kubectl apply -f k8s/jobs/p17-db-seed.yaml
-  kubectl -n "$NS" wait --for=condition=complete job/p17-db-seed --timeout=300s
+  if [[ -n $SEED_IMAGE ]]; then
+    sed "s#image: p17-db-seed:latest#image: ${SEED_IMAGE}#" k8s/jobs/p17-db-seed.yaml | kubectl apply -f -
+  else
+    kubectl apply -f k8s/jobs/p17-db-seed.yaml
+  fi
+  kubectl -n "$NS" wait --for=condition=complete job/p17-db-seed --timeout=600s
   kubectl -n "$NS" logs job/p17-db-seed | tail -8
 fi
 
