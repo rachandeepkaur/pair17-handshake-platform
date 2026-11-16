@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends
 from pymongo.database import Database
-
 from app.dependencies import CompanyContext, get_db, require_company, require_permission
 from app.schemas.application import ApplicationOut, ApplicationStatus
 from app.schemas.job import JobCreate, JobOut
