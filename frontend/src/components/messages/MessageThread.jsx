@@ -21,11 +21,13 @@ function Attachment({ to, icon: Icon, label, title, mine }) {
 }
 
 export default function MessageThread({ messages, participantSide = 'company', attachmentBasePath = '/company' }) {
-  const endRef = useRef(null)
+  const listRef = useRef(null)
   const lastId = messages.at(-1)?.id
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: 'end' })
+    // Scroll only the thread; scrollIntoView would also scroll the page.
+    const list = listRef.current
+    if (list) list.scrollTop = list.scrollHeight
   }, [lastId])
 
   if (messages.length === 0) {
@@ -37,7 +39,7 @@ export default function MessageThread({ messages, participantSide = 'company', a
   }
 
   return (
-    <ol className="flex-1 space-y-3 overflow-y-auto p-4" aria-label="Messages">
+    <ol ref={listRef} className="flex-1 space-y-3 overflow-y-auto p-4" aria-label="Messages">
       {messages.map((message, index) => {
         const mine = message.sender_side === participantSide
         const previous = messages[index - 1]
@@ -77,7 +79,6 @@ export default function MessageThread({ messages, participantSide = 'company', a
           </li>
         )
       })}
-      <li ref={endRef} aria-hidden="true" />
     </ol>
   )
 }

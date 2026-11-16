@@ -30,9 +30,9 @@ export default function Login() {
         <span className="text-xl font-bold tracking-tight">Hirely</span>
       </Link>
 
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
-        <h1 className="mb-6 text-xl font-semibold">Sign in</h1>
-        <form onSubmit={handleSubmit} noValidate>
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-card">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Sign in</h1>
+        <form className="mt-6" onSubmit={handleSubmit} noValidate>
           <FormField
             label="Email"
             name="email"
@@ -55,22 +55,22 @@ export default function Login() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-md bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="h-10 w-full rounded-xl bg-brand-600 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSubmitting ? 'Signing in...' : 'Sign in'}
+            {isSubmitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-        <div className="mt-4 text-sm text-gray-600">
-          <p>New here? Create a new account:</p>
-          <div className="mt-2 flex gap-4">
-            <Link to="/signup/student" className="text-blue-600">
-              Student
-            </Link>
-            <Link to="/signup/company" className="text-blue-600">
-              Company
-            </Link>
-          </div>
-        </div>
+        <p className="mt-5 text-center text-sm text-gray-600">
+          New here? Create a{' '}
+          <Link to="/signup/student" className="font-medium text-brand-700 hover:text-brand-800">
+            student
+          </Link>{' '}
+          or{' '}
+          <Link to="/signup/company" className="font-medium text-brand-700 hover:text-brand-800">
+            company
+          </Link>{' '}
+          account
+        </p>
       </div>
     </div>
   )

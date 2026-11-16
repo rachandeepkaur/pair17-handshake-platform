@@ -25,8 +25,8 @@ export default function StudentPreferences({ preferences, onSaved }) {
     }
   }
 
-  return <Card className="p-5"><CardHeader title="Career preferences" subtitle="Used by the career assistant to personalize recommendations." />
-    <form onSubmit={save} className="mt-4 space-y-4">
+  return <Card><CardHeader title="Career preferences" subtitle="Used by the career assistant to personalize recommendations." />
+    <form onSubmit={save} className="space-y-4 p-5">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="text-sm font-medium text-gray-700">Preferred categories<input name="preferred_categories" value={values.preferred_categories || ''} onChange={change} placeholder="Internship, full time" className="mt-1 block h-10 w-full rounded-xl border border-gray-300 px-3 text-sm" /></label>
         <label className="text-sm font-medium text-gray-700">Preferred cities<input name="preferred_cities" value={values.preferred_cities || ''} onChange={change} placeholder="Palo Alto, Menlo Park" className="mt-1 block h-10 w-full rounded-xl border border-gray-300 px-3 text-sm" /></label>
