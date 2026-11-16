@@ -15,11 +15,13 @@ export const SUGGESTIONS = [
 
 export default function ChatWindow({ chat, heightClass = 'h-[28rem]', showSuggestions = true }) {
   const { conversation, draft, setDraft, loading, send, pendingAction, decide, tokenUsage } = chat
-  const bottomRef = useRef(null)
+  const scrollRef = useRef(null)
   const turns = toTurns(conversation)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    // Scroll only the message list; scrollIntoView would also scroll the page.
+    const list = scrollRef.current
+    if (list) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' })
   }, [conversation.length, loading, pendingAction])
 
   function handleKeyDown(event) {
@@ -31,7 +33,7 @@ export default function ChatWindow({ chat, heightClass = 'h-[28rem]', showSugges
 
   return (
     <div className={`flex min-h-0 flex-col ${heightClass}`}>
-      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4" aria-live="polite">
+      <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-5 py-4" aria-live="polite">
         {turns.length === 0 && (
           <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
             <p>Ask about internships, jobs, or upcoming events. Answers come only from Hirely’s listings.</p>
@@ -72,7 +74,6 @@ export default function ChatWindow({ chat, heightClass = 'h-[28rem]', showSugges
             Searching Hirely… the local model can take a minute or more.
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
       <div className={`border-t px-4 py-2 text-xs ${tokenUsage.context_percentage >= 70 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-gray-100 text-gray-500'}`}>

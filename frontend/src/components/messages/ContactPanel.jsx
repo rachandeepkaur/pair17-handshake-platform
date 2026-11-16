@@ -45,7 +45,7 @@ export default function ContactPanel({ student }) {
         {applications.loading ? (
           <Skeleton className="h-12 rounded-xl" />
         ) : applications.data?.length === 0 ? (
-          <p className="text-sm text-gray-500">Hasn't applied to your jobs yet.</p>
+          <p className="text-sm text-gray-500">Hasn&rsquo;t applied to your jobs yet.</p>
         ) : (
           <ul className="space-y-2">
             {applications.data?.map((application) => (

@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { Sparkles } from 'lucide-react'
 import FormField from '../../components/common/FormField'
 import { useForm } from '../../hooks/useForm'
 import { signupCompany } from '../../services/authService'
@@ -22,9 +23,17 @@ export default function CompanySignup() {
   })
 
   return (
-    <div className="max-w-md mx-auto mt-16 p-6 border rounded-lg shadow-sm">
-      <h1 className="text-xl font-semibold mb-6">Create a company account</h1>
-      <form onSubmit={handleSubmit} noValidate>
+    <main className="mx-auto mt-16 max-w-md px-4">
+      <Link to="/login" className="mb-6 flex items-center justify-center gap-2 rounded-lg">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
+          <Sparkles size={20} strokeWidth={2.5} aria-hidden="true" />
+        </span>
+        <span className="text-xl font-bold tracking-tight">Hirely</span>
+      </Link>
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-card">
+      <p className="text-sm font-semibold text-brand-600">Company portal</p>
+      <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900">Create a company account</h1>
+      <form className="mt-6" onSubmit={handleSubmit} noValidate>
         <FormField
           label="Company name"
           name="company_name"
@@ -63,17 +72,18 @@ export default function CompanySignup() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-md bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="h-10 w-full rounded-xl bg-brand-600 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSubmitting ? 'Creating account...' : 'Sign up'}
+          {isSubmitting ? 'Creating account…' : 'Create company account'}
         </button>
       </form>
-      <p className="mt-4 text-sm text-gray-600">
+      <p className="mt-5 text-center text-sm text-gray-600">
         Already have an account?{' '}
-        <Link to="/login" className="text-blue-600">
+        <Link to="/login" className="font-medium text-brand-700 hover:text-brand-800">
           Sign in
         </Link>
       </p>
-    </div>
+      </div>
+    </main>
   )
 }

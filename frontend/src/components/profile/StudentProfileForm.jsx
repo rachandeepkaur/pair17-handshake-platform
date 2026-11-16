@@ -1,7 +1,7 @@
 import FormField, { TextAreaField } from '../common/FormField'
 import Button from '../ui/Button'
 import { useForm } from '../../hooks/useForm'
-import { composeValidators, isEmail, maxLength, minLength, required } from '../../utils/validators'
+import { composeValidators, isEmail, maxLength, required } from '../../utils/validators'
 
 const optionalMax = (length) => maxLength(length)
 
