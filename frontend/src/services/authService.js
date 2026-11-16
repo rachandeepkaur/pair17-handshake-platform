@@ -14,3 +14,11 @@ export function changePassword(currentPassword, newPassword) {
     new_password: newPassword,
   })
 }
+
+// Ends the server-side session; the token is rejected from then on. The token
+// is read up front because the caller clears storage right after calling this.
+export async function logout() {
+  const token = localStorage.getItem('token')
+  if (!token) return
+  await api.post('/auth/logout', null, { headers: { Authorization: `Bearer ${token}` } })
+}

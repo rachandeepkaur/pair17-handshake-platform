@@ -383,3 +383,353 @@ pipeline continued after the failed message was isolated.
 Known limitation. APIs publish after the MySQL commit; if Kafka is down at that
 moment the API call still succeeds and the event is only logged as unpublished.
 A transactional outbox table relayed to Kafka would close that gap.
+
+
+==========================================================================
+Lab 2 — MySQL -> MongoDB migration, bcrypt, and secure sessions
+==========================================================================
+
+Date:     2026-11-13
+Command:  docker compose --profile migrate run --rm p17-db-migrate   (backend/db/migrate_mysql_to_mongo.py --verify)
+
+Migrating MySQL p17-mysql/p17_handshake -> MongoDB p17_handshake
+  accounts           -> accounts              250 documents
+  students           -> students              200 documents
+  companies          -> companies              50 documents
+  company_members    -> company_members        50 documents
+  team_invitations   -> team_invitations        0 documents
+  preferences        -> preferences             0 documents
+  jobs               -> jobs                  302 documents
+  applications       -> applications         1502 documents
+  events             -> events                100 documents
+  registrations      -> registrations         602 documents
+  saved_items        -> saved_items             0 documents
+  conversations      -> message_threads         0 documents
+  messages           -> messages                0 documents
+
+Verification (MySQL rows vs MongoDB documents):
+  accounts              250   accounts              250   OK
+  students              200   students              200   OK
+  companies              50   companies              50   OK
+  company_members        50   company_members        50   OK
+  team_invitations        0   team_invitations        0   OK
+  preferences             0   preferences             0   OK
+  jobs                  302   jobs                  302   OK
+  applications         1502   applications         1502   OK
+  events                100   events                100   OK
+  registrations         602   registrations         602   OK
+  saved_items             0   saved_items             0   OK
+  conversations           0   message_threads         0   OK
+  messages                0   messages                0   OK
+
+  bcrypt hash carried over for student001: $2b$12$... (60 chars)
+
+After the migration p17-mysql was stopped; every service, worker, and the gateway
+stayed healthy on MongoDB alone, scripts/verify_local.sh passed, and the Kafka
+happy path (scripts/kafka_demos.sh 0) wrote job 303 / application 1503, so the
+integer-id counters continued after the migrated ids.
+
+Command:  scripts/mongo_demo.sh
+
+
+== 1. Collections and document counts (MongoDB is the system of record)
+accounts              250
+students              200
+companies              50
+company_members        50
+preferences             0
+sessions                4
+jobs                  303
+applications         1503
+events                100
+registrations         603
+saved_items             0
+message_threads         0
+messages                0
+activity_logs           8
+assistant_rules         6
+student_memory          1
+conversations           0
+counters                6
+
+== 2. Student account + profile (bcrypt hash, integer _id kept from MySQL)
+{"_id":51,"email":"student001@seed.p17.example","role":"student","password_hash":"$2b$12$...(bcrypt, 60 chars)"}
+{"_id":51,"name":"Lorelai Gilmore","college_name":"San Jose State University","date_of_birth":"1999-01-01","city":"Palo Alto","major":"Computer Science","cgpa":{"$numberDecimal":"3.38"}}
+
+== 3. Job posting and application with resume metadata
+{"_id":1,"company_id":1,"title":"Software Engineering Intern","salary":{"$numberDecimal":"22000.00"},"posting_date":"2026-11-03","deadline":"2026-12-20","company_name":"Google"}
+{"_id":1503,"student_id":51,"job_id":303,"company_id":1,"status":"Reviewed","resume":{"path":"resumes/50549d9ff3044202a6a856cce64512df.pdf","original_filename":"p17-demo-resume.pdf","size_bytes":23,"sha256":"c2732c02567cd1515162a92c2ddbefe6219a9c158a6c9f07815fd3e603ef13dc","content_type":"application/pdf","uploaded_at":{"$date":"2026-11-13T16:55:34.390Z"}}}
+
+== 4. Event and registration
+{"_id":1,"name":"Technology Career Fair 1","event_date":"2026-11-12","event_time":"09:00:00","eligibility":null,"company_name":"Google"}
+{"_id":1,"student_id":205,"event_id":1,"registered_at":{"$date":"2026-11-11T10:26:09Z"},"company_id":1}
+
+== 5. Secure sessions: login creates a session, logout revokes it
+JWT claims: {'sub': '51', 'role': 'student', 'exp': 1794592571, 'sid': 'kB9z1DTV...'}
+stored session: {"_id":"88791cfad39a1be7... (SHA-256 of sid)","expires_at":{"$date":"2026-11-13T17:56:11.341Z"},"revoked_at":null}
+TTL index: {"v":2,"key":{"expires_at":1},"name":"expires_at_1","expireAfterSeconds":0}
+GET /api/students/me with the token          -> HTTP 200
+POST /api/auth/logout                         -> HTTP 204
+GET /api/students/me with the same token     -> HTTP 401  {"detail":"Session expired or signed out. Please sign in again."}
+
+== 6. Saved jobs/events and preferences
+save tool: Saved job 241 for this student.
+{"_id":52,"min_salary":{"$numberDecimal":"45000"},"preferred_categories":"internship","preferred_cities":"Palo Alto","preferred_skills":"Python","remote_ok":true,"student_id":52,"updated_at":{"$date":"2026-11-13T16:56:12.890Z"}}
+{"_id":1,"student_id":52,"item_type":"job","item_id":241,"saved_at":{"$date":"2026-11-13T16:56:14.586Z"}}
+
+== 7. Activity log (latest 8)
+{"account_id":52,"action":"item.saved","entity_type":"job","entity_id":241,"at":{"$date":"2026-11-13T16:56:14.587Z"}}
+{"account_id":52,"action":"preferences.updated","entity_type":null,"entity_id":null,"at":{"$date":"2026-11-13T16:56:12.903Z"}}
+{"account_id":52,"action":"auth.login","entity_type":null,"entity_id":null,"at":{"$date":"2026-11-13T16:56:12.852Z"}}
+{"account_id":51,"action":"auth.logout","entity_type":null,"entity_id":null,"at":{"$date":"2026-11-13T16:56:12.442Z"}}
+{"account_id":51,"action":"auth.login","entity_type":null,"entity_id":null,"at":{"$date":"2026-11-13T16:56:11.342Z"}}
+{"account_id":51,"action":"event.registered","entity_type":"event","entity_id":4,"at":{"$date":"2026-11-13T16:55:36.589Z"}}
+{"account_id":1,"action":"application.status_changed","entity_type":"application","entity_id":1503,"at":{"$date":"2026-11-13T16:55:36.406Z"}}
+{"account_id":51,"action":"application.created","entity_type":"application","entity_id":1503,"at":{"$date":"2026-11-13T16:55:34.405Z"}}
+
+Unit and API tests: cd backend && ../.venv/bin/python -m pytest -q   ->   89 passed
+(tests/test_mongo_api.py runs the API end to end on mongomock: bcrypt, sessions,
+logout, expiry, password change, profile, preferences, jobs, applications with
+resume metadata, events, messaging, team invitations, activity log.)
+
+
+==========================================================================
+Lab 2 — Three-layer assistant memory: consolidation demo
+==========================================================================
+
+Date:     2026-11-13
+Student:  student001@seed.p17.example (account 51)
+Model:    qwen3:8b via Ollama on the host (CPU), called only by p17-memory-worker
+Command:  scripts/memory_demo.sh   (seed -> /memory -> /memory consolidate -> wait -> /memory -> checks)
+
+Layers: assistant_rules (6 rules) | student_memory (learned, one dated line per entry)
+        | conversations (current session; compacted by the worker at logout)
+
+1. Learned memory BEFORE consolidation (60 entries; 4 exact duplicate pairs,
+   5 contradictions, 8 paraphrase groups, 15 interaction notes, 9 unique facts)
+------------------------------------------------------------------------------
+1. 2026-08-01 | background | Computer Science major
+2. 2026-08-02 | background | Expected to graduate in May 2027
+3. 2026-08-03 | location | Lives in San Jose and commutes to campus by train
+4. 2026-08-05 | skill | Knows Python and SQL
+5. 2026-08-06 | interaction | Searched for data internships in Palo Alto
+6. 2026-08-10 | preference | Prefers on-site roles and dislikes remote work
+7. 2026-08-12 | skill | Knows Git and GitHub pull-request workflows
+8. 2026-08-14 | background | Completed a data structures course
+9. 2026-08-15 | constraint | Only available for internships starting in summer 2027
+10. 2026-08-18 | preference | Prefers companies with formal mentorship programs
+11. 2026-08-19 | interaction | Ran a search for data engineering internships in Palo Alto
+12. 2026-08-20 | goal | Wants to become a frontend engineer
+13. 2026-08-22 | preference | Interested in Kafka and streaming data pipelines
+14. 2026-08-25 | skill | Comfortable with pandas for data analysis
+15. 2026-08-28 | preference | Likes small startups
+16. 2026-08-30 | constraint | Does not have a car; needs a transit-accessible office
+17. 2026-09-01 | constraint | Minimum acceptable internship salary is $30,000
+18. 2026-09-02 | interaction | Searched internships in Palo Alto again
+19. 2026-09-03 | goal | Wants a data engineering internship
+20. 2026-09-05 | location | Willing to work in Mountain View or Menlo Park
+21. 2026-09-08 | skill | Learning Apache Spark
+22. 2026-09-09 | constraint | Can work up to 20 hours a week during the semester
+23. 2026-09-10 | background | Studies Computer Science
+24. 2026-09-11 | interaction | Saved job 28 (Business Analyst Intern at EY)
+25. 2026-09-12 | skill | Knows Python and SQL
+26. 2026-09-13 | preference | Interested in fintech and climate-tech companies
+27. 2026-09-15 | skill | Uses pandas regularly
+28. 2026-09-16 | interaction | Searched for data internships in Mountain View
+29. 2026-09-18 | skill | Built a class project with Docker
+30. 2026-09-20 | goal | Looking for data engineering internships
+31. 2026-09-22 | background | Works as a teaching assistant for intro programming
+32. 2026-09-25 | interaction | Asked which events are open to Computer Science majors
+33. 2026-09-27 | location | Prefers offices near Caltrain stations
+34. 2026-09-28 | goal | Wants to earn an AWS certification by spring 2027
+35. 2026-09-30 | background | Expected to graduate in May 2027
+36. 2026-10-01 | interaction | Searched for Python internships in Palo Alto
+37. 2026-10-02 | skill | Taking an online Spark course
+38. 2026-10-03 | interaction | Asked about the fall career fair
+39. 2026-10-05 | preference | Interested in Kafka and streaming data pipelines
+40. 2026-10-08 | preference | Prefers startup environments over big companies
+41. 2026-10-09 | interaction | Saved job 169 (Agentic AI Intern at Block)
+42. 2026-10-11 | location | Open to jobs in Mountain View and Menlo Park
+43. 2026-10-12 | preference | Prefers companies with formal mentorship programs
+44. 2026-10-14 | skill | Has used Docker in coursework
+45. 2026-10-15 | constraint | Will not consider internships paying under $45,000
+46. 2026-10-16 | interaction | Searched for internships paying over $45,000
+47. 2026-10-18 | goal | Main goal: land a data engineering internship
+48. 2026-10-19 | preference | Prefers teams that use Python over Java
+49. 2026-10-20 | skill | Has started learning Spark
+50. 2026-10-21 | location | Moved to Palo Alto; no longer commutes from San Jose
+51. 2026-10-22 | interaction | Asked how to apply to job 253
+52. 2026-10-24 | constraint | Max 20 hours per week while in school
+53. 2026-10-26 | skill | Basic knowledge of AWS S3 and EC2
+54. 2026-10-27 | interaction | Asked the assistant to compare two internships
+55. 2026-10-28 | preference | Now prefers fully remote roles
+56. 2026-10-30 | goal | Switched career focus from frontend to data engineering
+57. 2026-11-01 | interaction | Searched for data internships in Menlo Park
+58. 2026-11-02 | constraint | Can start a part-time internship immediately, in fall 2026
+59. 2026-11-03 | interaction | Searched for remote data engineering roles
+60. 2026-11-05 | interaction | Asked for events next month
+
+2. /memory consolidate (the API request only publishes memory.consolidation_requested)
+------------------------------------------------------------------------------
+Consolidation queued for your 60 memory entries. It runs in the background; type /memory in a minute or two to see the result.
+request returned in 0.19 s
+
+3. p17-memory-worker (Kafka consumer) did the model work
+------------------------------------------------------------------------------
+2026-11-13 16:57:04,020 INFO [memory-worker] received memory.consolidation_requested[0]@0 key=51
+2026-11-13 17:09:56,475 INFO [memory-worker] memory.consolidation_requested[0]@0 key=51 event_id=9d9d99c4-86aa-4b6d-8bd3-d95d88d429b7 written to MongoDB
+2026-11-13 17:09:56,477 INFO [memory-worker] committed offset 1 for memory.consolidation_requested[0]
+status: done
+(16:57:04 -> 17:09:56: 7 model calls, one per category, about 13 minutes on CPU;
+ no user request waited for it.)
+
+4. /memory AFTER consolidation
+------------------------------------------------------------------------------
+Instructions layer: 6 rules I always follow.
+Learned layer: 39 entries about you.
+Last consolidation: done (60 -> 39 entries)
+
+1. 2026-08-01 | background | Computer Science major
+2. 2026-08-12 | skill | Knows Git and GitHub pull-request workflows
+3. 2026-08-14 | background | Completed a data structures course
+4. 2026-08-28 | preference | Likes small startups
+5. 2026-08-30 | constraint | Does not have a car; needs a transit-accessible office
+6. 2026-09-02 | interaction | 3 earlier interactions between 2026-08-06 and 2026-09-02 (e.g. Searched for data internships in Palo Alto)
+7. 2026-09-10 | background | Studies Computer Science
+8. 2026-09-11 | interaction | Saved job 28 (Business Analyst Intern at EY)
+9. 2026-09-12 | skill | Knows Python and SQL
+10. 2026-09-13 | preference | Interested in fintech and climate-tech companies
+11. 2026-09-15 | skill | Uses pandas regularly
+12. 2026-09-16 | interaction | Searched for data internships in Mountain View
+13. 2026-09-22 | background | Works as a teaching assistant for intro programming
+14. 2026-09-25 | interaction | Asked which events are open to Computer Science majors
+15. 2026-09-27 | location | Prefers offices near Caltrain stations
+16. 2026-09-30 | background | Expected to graduate in May 2027
+17. 2026-10-01 | interaction | Searched for Python internships in Palo Alto
+18. 2026-10-03 | interaction | Asked about the fall career fair
+19. 2026-10-05 | preference | Interested in Kafka and streaming data pipelines
+20. 2026-10-08 | preference | Prefers startup environments over big companies
+21. 2026-10-09 | interaction | Saved job 169 (Agentic AI Intern at Block)
+22. 2026-10-11 | location | Open to jobs in Mountain View and Menlo Park
+23. 2026-10-12 | preference | Prefers companies with formal mentorship programs
+24. 2026-10-14 | skill | Has used Docker in coursework
+25. 2026-10-15 | constraint | Will not consider internships paying under $45,000
+26. 2026-10-16 | interaction | Searched for internships paying over $45,000
+27. 2026-10-19 | preference | Prefers teams that use Python over Java
+28. 2026-10-20 | skill | Learning Apache Spark
+29. 2026-10-21 | location | Moved to Palo Alto; no longer commutes from San Jose
+30. 2026-10-22 | interaction | Asked how to apply to job 253
+31. 2026-10-24 | constraint | Max 20 hours per week while in school
+32. 2026-10-26 | skill | Basic knowledge of AWS S3 and EC2
+33. 2026-10-27 | interaction | Asked to compare two internships
+34. 2026-10-28 | preference | Prefers fully remote roles
+35. 2026-10-30 | goal | Switched career focus from frontend to data engineering
+36. 2026-11-01 | interaction | Searched for data internships in Palo Alto, Mountain View, Menlo Park
+37. 2026-11-02 | constraint | Can start a part-time internship immediately, in fall 2026
+38. 2026-11-03 | interaction | Searched for remote data engineering roles
+39. 2026-11-05 | interaction | Asked for events next month
+
+5. Checks (python -m db.seed.check_memory)
+------------------------------------------------------------------------------
+Entries: before=60 after=39  (model calls=7, fallbacks=0)
+  PASS seeded memory had at least 60 entries (60)
+  PASS consolidated memory is below 40 entries (39)
+Duplicates merged (key phrase appears in at most one entry):
+  PASS 'python and sql': 1 entry ['Knows Python and SQL']
+  PASS 'kafka': 1 entry ['Interested in Kafka and streaming data pipelines']
+  PASS 'graduate': 1 entry ['Expected to graduate in May 2027']
+  PASS 'mentorship': 1 entry ['Prefers companies with formal mentorship programs']
+Contradictions resolved (older fact gone, newer fact kept):
+  PASS location: 'Lives in San Jose and commutes to campus by train' -> 'Moved to Palo Alto; no longer commutes from San Jose'
+  PASS preference: 'Prefers on-site roles and dislikes remote work' -> 'Now prefers fully remote roles'
+  PASS constraint: 'Only available for internships starting in summer 2027' -> 'Can start a part-time internship immediately, in fall 2026'
+  PASS goal: 'Wants to become a frontend engineer' -> 'Switched career focus from frontend to data engineering'
+  PASS constraint: 'Minimum acceptable internship salary is $30,000' -> 'Will not consider internships paying under $45,000'
+Unique facts kept (informational: the model may merge or lose these):
+  KEPT skill: Knows Git and GitHub pull-request workflows
+  KEPT skill: Basic knowledge of AWS S3 and EC2
+  KEPT background: Completed a data structures course
+  KEPT background: Works as a teaching assistant for intro programming
+  WARN lost goal: Wants to earn an AWS certification by spring 2027
+  KEPT preference: Interested in fintech and climate-tech companies
+  KEPT constraint: Does not have a car; needs a transit-accessible office
+  KEPT location: Prefers offices near Caltrain stations
+  KEPT preference: Prefers teams that use Python over Java
+
+Consolidation decisions recorded by p17-memory-worker:
+  [exact-duplicate/-] skill: kept '2026-09-12 | Knows Python and SQL' | dropped: 2026-08-05 | Knows Python and SQL | identical text; kept the newest date
+  [exact-duplicate/-] background: kept '2026-09-30 | Expected to graduate in May 2027' | dropped: 2026-08-02 | Expected to graduate in May 2027 | identical text; kept the newest date
+  [exact-duplicate/-] preference: kept '2026-10-05 | Interested in Kafka and streaming data pipelines' | dropped: 2026-08-22 | Interested in Kafka and streaming data pipelines | identical text; kept the newest date
+  [exact-duplicate/-] preference: kept '2026-10-12 | Prefers companies with formal mentorship programs' | dropped: 2026-08-18 | Prefers companies with formal mentorship programs | identical text; kept the newest date
+  [model/contradiction] preference: kept 'Prefers fully remote roles' | dropped: 2026-08-10 | Prefers on-site roles and dislikes remote work | Contradiction between on-site and fully remote preferences
+  [model/duplicate] preference: kept 'Prefers fully remote roles' | dropped: 2026-10-28 | Now prefers fully remote roles | Duplicate of the same fact
+  [model/summary] goal: kept 'Switched career focus from frontend to data engineering' | dropped: 2026-09-03 | Wants a data engineering internship; 2026-09-20 | Looking for data engineering internships | Repeated searches for data engineering internships combined into one note
+  [model/duplicate] skill: kept 'Knows Git and GitHub pull-request workflows' | dropped: 2026-08-12 | Knows Git and GitHub pull-request workflows | Duplicate fact
+  [model/summary] skill: kept 'Uses pandas regularly' | dropped: 2026-08-25 | Comfortable with pandas for data analysis; 2026-09-15 | Uses pandas regularly | Repeated use of pandas
+  [model/duplicate] skill: kept 'Basic knowledge of AWS S3 and EC2' | dropped: 2026-10-26 | Basic knowledge of AWS S3 and EC2 | Duplicate fact
+  [model/summary] skill: kept 'Has used Docker in coursework' | dropped: 2026-09-18 | Built a class project with Docker; 2026-10-14 | Has used Docker in coursework | Repeated use of Docker
+  [model/summary] skill: kept 'Learning Apache Spark' | dropped: 2026-09-08 | Learning Apache Spark; 2026-10-02 | Taking an online Spark course; 2026-10-20 | Has started learning Spark | Repeated learning of Spark
+  [model/duplicate] skill: kept 'Knows Python and SQL' | dropped: 2026-09-12 | Knows Python and SQL | Duplicate fact
+  [model/duplicate] location: kept 'Moved to Palo Alto; no longer commutes from San Jose' | dropped: 2026-08-03 | Lives in San Jose and commutes to campus by train | Newer note replaces older note
+  [model/contradiction] location: kept 'Moved to Palo Alto; no longer commutes from San Jose' | dropped: 2026-10-21 | Moved to Palo Alto; no longer commutes from San Jose | Newer note replaces older note
+  [model/summary] location: kept 'Open to jobs in Mountain View and Menlo Park' | dropped: 2026-09-05 | Willing to work in Mountain View or Menlo Park; 2026-10-11 | Open to jobs in Mountain View and Menlo Park | Combined related notes
+  [model/duplicate] constraint: kept 'Can start a part-time internship immediately, in fall 2026' | dropped: 2026-08-15 | Only available for internships starting in summer 2027 | Newer note replaces older note with same fact
+  [model/contradiction] constraint: kept 'Max 20 hours per week while in school' | dropped: 2026-09-09 | Can work up to 20 hours a week during the semester | Newer note overrides older note with conflicting info
+  [model/summary] constraint: kept 'Will not consider internships paying under $45,000' | dropped: 2026-09-01 | Minimum acceptable internship salary is $30,000 | Combined related notes into one summary
+  [restored/-] constraint: kept '2026-08-30 | Does not have a car; needs a transit-accessible office' | the model dropped this note without citing or explaining it
+  [model/duplicate] background: kept 'Expected to graduate in May 2027' | dropped: 2026-09-30 | Expected to graduate in May 2027 | Duplicate fact
+  [model/summary] background: kept 'Studies Computer Science' | dropped: 2026-09-10 | Studies Computer Science | Summary of related notes
+  [model/summary] interaction: kept 'Searched for data internships in Palo Alto, Mountain View, Menlo Park' | dropped: 2026-09-02 | Searched internships in Palo Alto again; 2026-09-16 | Searched for data internships in Mountain View; 2026-11-01 | Searched for data internships in Menlo Park | Repeated searches for data internships in different cities combined into one note
+  [model/duplicate] interaction: kept 'Asked to compare two internships' | dropped: 2026-10-27 | Asked the assistant to compare two internships | Same fact, different wording
+  [model/duplicate] interaction: kept 'Searched for data internships in Palo Alto, Mountain View, Menlo Park' | dropped: 2026-09-02 | Searched internships in Palo Alto again; 2026-09-16 | Searched for data internships in Mountain View; 2026-11-01 | Searched for data internships in Menlo Park | Same fact, different wording
+  [model/duplicate] interaction: kept 'Searched for data internships in Palo Alto, Mountain View, Menlo Park' | dropped: 2026-09-02 | Searched internships in Palo Alto again; 2026-09-16 | Searched for data internships in Mountain View; 2026-11-01 | Searched for data internships in Menlo Park | Same fact, different wording
+  [restored/-] interaction: kept '2026-10-01 | Searched for Python internships in Palo Alto' | the model dropped this note without citing or explaining it
+  [restored/-] interaction: kept '2026-11-05 | Asked for events next month' | the model dropped this note without citing or explaining it
+  [size-limit/-] interaction: kept '3 earlier interactions between 2026-08-06 and 2026-09-02 (e.g. Searched for data internships in Palo Alto)' | dropped: 2026-08-06 | Searched for data internships in Palo Alto; 2026-08-19 | Ran a search for data engineering internships in Palo Alto; 2026-09-02 | Searched internships in Palo Alto again | still above 39 entries after merging; oldest interaction notes folded into one
+
+All memory checks passed.
+
+6. Memory is injected into the prompt
+------------------------------------------------------------------------------
+Q: Based on what you remember about me, what kind of internships should I look for?
+Based on what I remember about you, you should look for data engineering internships in Palo Alto or Menlo Park that offer remote options, require Python, Kafka, and streaming data pipelines, and pay at least $45,000. Since no matching internships were found, you might want to expand your search or consider slightly different skills or locations.
+
+Findings
+--------
+Result: 60 -> 39 entries (below 40); all 4 duplicate pairs merged; all 5
+contradictions resolved in favour of the newer statement.
+
+One decision explained (preference contradiction). The memory held
+"2026-08-10 | preference | Prefers on-site roles and dislikes remote work" and
+"2026-10-28 | preference | Now prefers fully remote roles". The model kept only
+"Prefers fully remote roles" and recorded a contradiction decision that dropped
+the August note. It cited both notes as sources and proposed a date; the worker
+validates that a returned note's date is one of its cited sources' dates, so the
+note kept 2026-10-28 (the newer statement wins). The effect is visible in step 6:
+the assistant recommends roles "that offer remote options".
+
+What the model handled incorrectly:
+- It lost a fact. "2026-09-28 | goal | Wants to earn an AWS certification by
+  spring 2027" disappeared: the model folded the goal notes into "Switched career
+  focus from frontend to data engineering" and listed the certification note as a
+  source without carrying its content. The restore safeguard only re-adds notes
+  that are neither cited nor explicitly dropped, so it could not catch this.
+  check_memory now reports every unique fact (KEPT / WARN lost) so the loss is
+  visible; a stricter fix would be a second pass that checks each cited source is
+  still represented.
+- It missed merges: "Computer Science major" / "Studies Computer Science" and
+  "Likes small startups" / "Prefers startup environments over big companies"
+  both survived as pairs.
+- It mislabelled decisions: the summer-2027 vs immediately contradiction was
+  labelled "duplicate", the $30,000 vs $45,000 contradiction "summary", and one
+  location decision listed the kept note as dropped. The outcomes were right, so
+  the worker trusts the cited "from" ids over the free-text decision labels.
+- It silently dropped 3 notes (no car / transit office, a Python search in Palo
+  Alto, a question about next month's events); the worker restored all 3.
+- After the model pass the list was still at 41, so the deterministic size limit
+  folded the 3 oldest search notes into one summary line.
+
+Bugs found and fixed during the run: a 60-line /memory listing exceeded the
+4,000-character conversation message limit (raised to 8,000, test added), and the
+audit record's before/after entry lists were overwritten by the counts (stored as
+before_entries / after_entries now, test added).

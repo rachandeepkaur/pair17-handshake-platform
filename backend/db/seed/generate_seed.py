@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Populate the Handshake database with deterministic Lab 1 demo data.
+"""Populate the Handshake MongoDB database with deterministic demo data.
 
-Run from the repository root after applying schema.sql:
+Run from the repository root (MONGO_URI / MONGO_DB from the environment or .env):
     python backend/db/seed/generate_seed.py
+
+The random draws are the same as the Lab 1 MySQL generator, so the same SEED
+produces the same companies, students, jobs, applications, and events.
 
 Use --reset only when it is acceptable to delete all application data first.
 """
@@ -11,9 +14,9 @@ import argparse
 import random
 import sys
 from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 from pathlib import Path
 
-from sqlalchemy import create_engine, text
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -21,6 +24,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from app.config import settings  # noqa: E402
+from app.mongo import encode, ensure_indexes, get_database, set_counter_floor, utcnow  # noqa: E402
 
 
 COMPANY_COUNT = 50
@@ -186,22 +190,14 @@ EVENT_TEMPLATES = [
     "Employer Coffee Chat",
     "Career Paths Panel",
 ]
-RESET_TABLES = [
-    "messages",
-    "conversations",
-    "team_invitations",
-    "company_members",
-    "preferences",
-    "saved_items",
-    "registrations",
-    "applications",
-    "events",
-    "jobs",
-    "students",
-    "companies",
-    "accounts",
+# Collections the generator owns; --reset clears them (assistant memory included,
+# since it describes these students).
+RESET_COLLECTIONS = [
+    "accounts", "students", "companies", "company_members", "team_invitations", "preferences",
+    "jobs", "applications", "events", "registrations", "saved_items", "message_threads", "messages",
+    "sessions", "activity_logs", "conversations", "student_memory", "counters",
 ]
-REQUIRED_TABLES = {"accounts", "students", "companies", "jobs", "applications", "events", "registrations"}
+REQUIRED_EMPTY = ("accounts", "students", "companies", "jobs", "applications", "events", "registrations")
 
 
 def parse_args() -> argparse.Namespace:
@@ -209,7 +205,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--reset",
         action="store_true",
-        help="Delete all existing database application data before generating seed data.",
+        help="Delete all existing application data before generating seed data.",
     )
     return parser.parse_args()
 
@@ -224,243 +220,202 @@ def configured_cities() -> list[str]:
     return cities
 
 
-def table_names(connection) -> set[str]:
-    return {row[0] for row in connection.execute(text("SHOW TABLES"))}
-
-
-def clear_existing_data(connection, tables: set[str]) -> None:
-    for table in RESET_TABLES:
-        if table in tables:
-            connection.execute(text(f"DELETE FROM {table}"))
-
-
-def ensure_empty_database(connection, tables: set[str], reset: bool) -> None:
-    missing = REQUIRED_TABLES - tables
-    if missing:
-        raise RuntimeError(f"Database schema is missing required tables: {', '.join(sorted(missing))}")
-
-    has_data = any(
-        connection.scalar(text(f"SELECT EXISTS(SELECT 1 FROM {table} LIMIT 1)"))
-        for table in REQUIRED_TABLES
-    )
+def ensure_empty_database(db, reset: bool) -> None:
+    has_data = any(db[name].estimated_document_count() for name in REQUIRED_EMPTY)
     if has_data and not reset:
         raise RuntimeError("Database already contains data. Re-run with --reset to replace it.")
     if reset:
-        clear_existing_data(connection, tables)
+        for name in RESET_COLLECTIONS:
+            db[name].delete_many({})
 
 
-def insert_account(connection, *, email: str, role: str) -> int:
-    result = connection.execute(
-        text(
-            """
-            INSERT INTO accounts (email, password_hash, role)
-            VALUES (:email, :password_hash, :role)
-            """
-        ),
-        {"email": email, "password_hash": DEMO_PASSWORD_HASH, "role": role},
-    )
-    return int(result.lastrowid)
+class Ids:
+    """Sequential integer ids per collection (the counters are set once at the end)."""
+
+    def __init__(self):
+        self.last: dict[str, int] = {}
+
+    def next(self, collection: str) -> int:
+        self.last[collection] = self.last.get(collection, 0) + 1
+        return self.last[collection]
 
 
-def generate_companies(connection, cities: list[str]) -> list[int]:
-    company_ids: list[int] = []
-    company_rows = []
-    owner_rows = []
+def new_account(ids: Ids, now: datetime, *, email: str, role: str) -> dict:
+    return {"_id": ids.next("accounts"), "email": email, "password_hash": DEMO_PASSWORD_HASH, "role": role, "created_at": now}
 
+
+def generate_companies(db, ids: Ids, cities: list[str]) -> list[dict]:
+    now = utcnow()
+    accounts, companies, owners = [], [], []
     for index in range(COMPANY_COUNT):
-        account_id = insert_account(
-            connection,
-            email=f"company{index + 1:03d}@seed.p17.example",
-            role="company",
-        )
-        company_ids.append(account_id)
+        account = new_account(ids, now, email=f"company{index + 1:03d}@seed.p17.example", role="company")
+        accounts.append(account)
         company_name = COMPANY_NAMES[index]
         city = cities[index % len(cities)]
-        company_rows.append(
+        companies.append(
             {
-                "account_id": account_id,
+                "_id": account["_id"],
+                "account_id": account["_id"],
                 "company_name": company_name,
                 "location": f"{city}, CA",
                 "description": f"{company_name} connects early-career talent with meaningful work.",
                 "contact_info": f"recruiting{index + 1:03d}@seed.p17.example",
+                "profile_picture_path": None,
+                "updated_at": now,
             }
         )
-        owner_rows.append(
+        owners.append(
             {
-                "company_id": account_id,
-                "account_id": account_id,
+                "_id": ids.next("company_members"),
+                "company_id": account["_id"],
+                "account_id": account["_id"],
                 "name": f"{company_name} Recruiting",
                 "role": "owner",
+                "last_active_at": None,
+                "created_at": now,
             }
         )
-
-    connection.execute(
-        text(
-            """
-            INSERT INTO companies (account_id, company_name, location, description, contact_info)
-            VALUES (:account_id, :company_name, :location, :description, :contact_info)
-            """
-        ),
-        company_rows,
-    )
-    connection.execute(
-        text(
-            """
-            INSERT INTO company_members (company_id, account_id, name, role)
-            VALUES (:company_id, :account_id, :name, :role)
-            """
-        ),
-        owner_rows,
-    )
-    return company_ids
+    db.accounts.insert_many(accounts)
+    db.companies.insert_many(companies)
+    db.company_members.insert_many(owners)
+    return companies
 
 
-def generate_students(connection, cities: list[str], rng: random.Random) -> tuple[list[int], dict[int, str]]:
+def generate_students(db, ids: Ids, cities: list[str], rng: random.Random) -> tuple[list[int], dict[int, str]]:
+    now = utcnow()
     student_ids: list[int] = []
     student_majors: dict[int, str] = {}
-    student_rows = []
+    accounts, students = [], []
 
     for index in range(STUDENT_COUNT):
-        account_id = insert_account(
-            connection,
-            email=f"student{index + 1:03d}@seed.p17.example",
-            role="student",
-        )
+        account = new_account(ids, now, email=f"student{index + 1:03d}@seed.p17.example", role="student")
+        accounts.append(account)
+        account_id = account["_id"]
         major = MAJORS[index % len(MAJORS)]
         degree = degree_for_student(index, major)
         student_ids.append(account_id)
         student_majors[account_id] = major
-        student_rows.append(
-            {
-                "account_id": account_id,
-                "name": STUDENT_NAMES[index],
-                "college_name": COLLEGES[index % len(COLLEGES)],
-                "date_of_birth": date(1999 + index % 6, (index % 12) + 1, (index % 27) + 1),
-                "city": cities[index % len(cities)],
-                "state": "CA",
-                "country": "United States",
-                "career_objective": f"Seeking an entry-level opportunity in {major}.",
-                "degree": degree,
-                "major": major,
-                "graduation_year": 2026 + index % 4,
-                "cgpa": round(rng.uniform(2.7, 4.0), 2),
-                "experience": f"Completed project work and coursework in {major}.",
-                "phone": f"408-555-{index + 1000:04d}",
-                "skills": SKILL_SETS[index % len(SKILL_SETS)],
-            }
-        )
-
-    connection.execute(
-        text(
-            """
-            INSERT INTO students (
-                account_id, name, college_name, date_of_birth, city, state, country,
-                career_objective, degree, major, graduation_year, cgpa, experience, phone, skills
-            ) VALUES (
-                :account_id, :name, :college_name, :date_of_birth, :city, :state, :country,
-                :career_objective, :degree, :major, :graduation_year, :cgpa, :experience, :phone, :skills
+        students.append(
+            encode(
+                {
+                    "_id": account_id,
+                    "account_id": account_id,
+                    "name": STUDENT_NAMES[index],
+                    "college_name": COLLEGES[index % len(COLLEGES)],
+                    "date_of_birth": date(1999 + index % 6, (index % 12) + 1, (index % 27) + 1),
+                    "city": cities[index % len(cities)],
+                    "state": "CA",
+                    "country": "United States",
+                    "career_objective": f"Seeking an entry-level opportunity in {major}.",
+                    "degree": degree,
+                    "major": major,
+                    "graduation_year": 2026 + index % 4,
+                    "cgpa": Decimal(str(round(rng.uniform(2.7, 4.0), 2))),
+                    "experience": f"Completed project work and coursework in {major}.",
+                    "phone": f"408-555-{index + 1000:04d}",
+                    "skills": SKILL_SETS[index % len(SKILL_SETS)],
+                    "profile_picture_path": None,
+                    "updated_at": now,
+                }
             )
-            """
-        ),
-        student_rows,
-    )
+        )
+    db.accounts.insert_many(accounts)
+    db.students.insert_many(students)
     return student_ids, student_majors
 
 
-def generate_jobs(connection, company_ids: list[int], cities: list[str], rng: random.Random) -> list[int]:
+def generate_jobs(db, ids: Ids, companies: list[dict], cities: list[str], rng: random.Random) -> list[dict]:
     today = date.today()
-    job_ids: list[int] = []
-
+    now = utcnow()
+    jobs = []
     for index in range(JOB_COUNT):
         title, category, skills = JOB_TEMPLATES[index % len(JOB_TEMPLATES)]
         active = index < 270
         posting_date = today - timedelta(days=rng.randint(1, 45))
         deadline = today + timedelta(days=rng.randint(7, 90)) if active else today - timedelta(days=rng.randint(1, 30))
         city = cities[index % len(cities)]
-        result = connection.execute(
-            text(
-                """
-                INSERT INTO jobs (
-                    company_id, title, description, category, city, location, is_remote,
-                    salary, skills_required, posting_date, deadline
-                ) VALUES (
-                    :company_id, :title, :description, :category, :city, :location, :is_remote,
-                    :salary, :skills_required, :posting_date, :deadline
-                )
-                """
-            ),
-            {
-                "company_id": company_ids[index % len(company_ids)],
-                "title": title,
-                "description": f"Join our team as a {title}. You will contribute to practical projects and learn from experienced mentors.",
-                "category": category,
-                "city": city,
-                "location": f"{city}, CA",
-                "is_remote": index % 5 == 0,
-                "salary": 22_000 + (index % 12) * 7_500,
-                "skills_required": skills,
-                "posting_date": posting_date,
-                "deadline": deadline,
-            },
+        company = companies[index % len(companies)]
+        jobs.append(
+            encode(
+                {
+                    "_id": ids.next("jobs"),
+                    "company_id": company["_id"],
+                    "company_name": company["company_name"],
+                    "title": title,
+                    "description": f"Join our team as a {title}. You will contribute to practical projects and learn from experienced mentors.",
+                    "category": category,
+                    "city": city,
+                    "location": f"{city}, CA",
+                    "is_remote": index % 5 == 0,
+                    "salary": Decimal(22_000 + (index % 12) * 7_500),
+                    "skills_required": skills,
+                    "posting_date": posting_date,
+                    "deadline": deadline,
+                    "created_at": now,
+                }
+            )
         )
-        job_ids.append(int(result.lastrowid))
-    return job_ids
+    db.jobs.insert_many(jobs)
+    return jobs
 
 
-def generate_applications(connection, student_ids: list[int], job_ids: list[int], rng: random.Random) -> None:
-    combinations = rng.sample(range(len(student_ids) * len(job_ids)), APPLICATION_COUNT)
+def generate_applications(db, ids: Ids, student_ids: list[int], jobs: list[dict], rng: random.Random) -> None:
+    combinations = rng.sample(range(len(student_ids) * len(jobs)), APPLICATION_COUNT)
     statuses = ["Pending", "Pending", "Reviewed", "Declined"]
     applied_at = datetime.combine(date.today() - timedelta(days=3), time(10, 0))
     rows = []
     for combination in combinations:
-        student_index, job_index = divmod(combination, len(job_ids))
+        student_index, job_index = divmod(combination, len(jobs))
+        job = jobs[job_index]
+        when = applied_at - timedelta(days=rng.randint(0, 120))
         rows.append(
             {
+                "_id": ids.next("applications"),
                 "student_id": student_ids[student_index],
-                "job_id": job_ids[job_index],
-                "resume_path": f"seed/resumes/student-{student_index + 1:03d}.pdf",
+                "job_id": job["_id"],
+                "company_id": job["company_id"],
                 "status": rng.choice(statuses),
-                "applied_at": applied_at - timedelta(days=rng.randint(0, 120)),
+                "resume": {
+                    "path": f"seed/resumes/student-{student_index + 1:03d}.pdf",
+                    "original_filename": f"student-{student_index + 1:03d}.pdf",
+                    "size_bytes": None,
+                    "sha256": None,
+                    "content_type": "application/pdf",
+                    "uploaded_at": when,
+                },
+                "applied_at": when,
+                "updated_at": when,
             }
         )
-    connection.execute(
-        text(
-            """
-            INSERT INTO applications (student_id, job_id, resume_path, status, applied_at)
-            VALUES (:student_id, :job_id, :resume_path, :status, :applied_at)
-            """
-        ),
-        rows,
-    )
+    db.applications.insert_many(rows)
 
 
-def generate_events(connection, company_ids: list[int], cities: list[str]) -> list[tuple[int, str | None]]:
+def generate_events(db, ids: Ids, companies: list[dict], cities: list[str]) -> list[dict]:
     today = date.today()
-    events: list[tuple[int, str | None]] = []
+    now = utcnow()
     eligibility_values = [None, "Everyone", "All majors", "Computer Science", "Data Science", "Computer Science, Data Science"]
-
+    events = []
     for index in range(EVENT_COUNT):
         event_name = EVENT_TEMPLATES[index % len(EVENT_TEMPLATES)]
-        eligibility = eligibility_values[index % len(eligibility_values)]
+        company = companies[index % len(companies)]
         city = cities[index % len(cities)]
-        result = connection.execute(
-            text(
-                """
-                INSERT INTO events (company_id, name, description, event_date, event_time, location, eligibility)
-                VALUES (:company_id, :name, :description, :event_date, :event_time, :location, :eligibility)
-                """
-            ),
-            {
-                "company_id": company_ids[index % len(company_ids)],
-                "name": f"{event_name} {index + 1}",
-                "description": f"Meet recruiters and learn about opportunities at this {event_name.lower()}.",
-                "event_date": today + timedelta(days=1 + index % 120),
-                "event_time": time(9 + index % 8, 30 if index % 2 else 0),
-                "location": f"{city}, CA",
-                "eligibility": eligibility,
-            },
+        events.append(
+            encode(
+                {
+                    "_id": ids.next("events"),
+                    "company_id": company["_id"],
+                    "company_name": company["company_name"],
+                    "name": f"{event_name} {index + 1}",
+                    "description": f"Meet recruiters and learn about opportunities at this {event_name.lower()}.",
+                    "event_date": today + timedelta(days=1 + index % 120),
+                    "event_time": time(9 + index % 8, 30 if index % 2 else 0),
+                    "location": f"{city}, CA",
+                    "eligibility": eligibility_values[index % len(eligibility_values)],
+                    "created_at": now,
+                }
+            )
         )
-        events.append((int(result.lastrowid), eligibility))
+    db.events.insert_many(events)
     return events
 
 
@@ -472,28 +427,29 @@ def eligible_for_event(eligibility: str | None, major: str) -> bool:
 
 
 def generate_registrations(
-    connection,
-    events: list[tuple[int, str | None]],
-    student_ids: list[int],
-    student_majors: dict[int, str],
-    rng: random.Random,
+    db, ids: Ids, events: list[dict], student_ids: list[int], student_majors: dict[int, str], rng: random.Random
 ) -> None:
+    now = utcnow()
     rows = []
-    for event_id, eligibility in events:
-        eligible_students = [student_id for student_id in student_ids if eligible_for_event(eligibility, student_majors[student_id])]
+    for event in events:
+        eligible_students = [s for s in student_ids if eligible_for_event(event["eligibility"], student_majors[s])]
         for student_id in rng.sample(eligible_students, k=min(6, len(eligible_students))):
-            rows.append({"student_id": student_id, "event_id": event_id})
-    connection.execute(
-        text("INSERT INTO registrations (student_id, event_id) VALUES (:student_id, :event_id)"),
-        rows,
-    )
+            rows.append(
+                {
+                    "_id": ids.next("registrations"),
+                    "student_id": student_id,
+                    "event_id": event["_id"],
+                    "company_id": event["company_id"],
+                    "registered_at": now,
+                }
+            )
+    db.registrations.insert_many(rows)
 
 
-def report_counts(connection) -> None:
+def report_counts(db) -> None:
     print("Seed data created:")
-    for table in ("companies", "students", "jobs", "applications", "events", "registrations"):
-        count = connection.scalar(text(f"SELECT COUNT(*) FROM {table}"))
-        print(f"  {table}: {count}")
+    for name in ("companies", "students", "jobs", "applications", "events", "registrations"):
+        print(f"  {name}: {db[name].count_documents({})}")
     print(f"\nAll generated accounts use password: {DEMO_PASSWORD}")
     print("Example student login: student001@seed.p17.example")
     print("Example company login: company001@seed.p17.example")
@@ -503,18 +459,25 @@ def main() -> None:
     args = parse_args()
     cities = configured_cities()
     rng = random.Random(settings.seed)
-    engine = create_engine(settings.database_url)
+    db = get_database()
 
-    with engine.begin() as connection:
-        tables = table_names(connection)
-        ensure_empty_database(connection, tables, args.reset)
-        company_ids = generate_companies(connection, cities)
-        student_ids, student_majors = generate_students(connection, cities, rng)
-        job_ids = generate_jobs(connection, company_ids, cities, rng)
-        generate_applications(connection, student_ids, job_ids, rng)
-        events = generate_events(connection, company_ids, cities)
-        generate_registrations(connection, events, student_ids, student_majors, rng)
-        report_counts(connection)
+    ensure_empty_database(db, args.reset)
+    ensure_indexes(db)
+    ids = Ids()
+    companies = generate_companies(db, ids, cities)
+    student_ids, student_majors = generate_students(db, ids, cities, rng)
+    jobs = generate_jobs(db, ids, companies, cities, rng)
+    generate_applications(db, ids, student_ids, jobs, rng)
+    events = generate_events(db, ids, companies, cities)
+    generate_registrations(db, ids, events, student_ids, student_majors, rng)
+    for collection in ids.last:
+        set_counter_floor(db, collection)
+    # Assistant layers: the rules, and the long learned memory used by the consolidation demo.
+    from db.seed.assistant_memory import seed_assistant_rules, seed_demo_memory
+
+    seed_assistant_rules(db)
+    seed_demo_memory(db)
+    report_counts(db)
 
 
 if __name__ == "__main__":

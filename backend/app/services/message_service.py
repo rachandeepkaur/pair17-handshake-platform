@@ -1,16 +1,14 @@
-from dataclasses import dataclass
-from datetime import datetime
+"""Company <-> student messaging. Threads live in `message_threads` (the name
+`conversations` belongs to the assistant's session memory); messages in `messages`."""
 
-from sqlalchemy import func, or_, select, update
-from sqlalchemy.orm import Session, joinedload
+from dataclasses import dataclass
+from typing import Any
+
+from pymongo.database import Database
+from pymongo.errors import DuplicateKeyError
 
 from app.core.exceptions import BadRequestError, ForbiddenError, NotFoundError
-from app.models.company import Company
-from app.models.company_member import CompanyMember
-from app.models.event import Event
-from app.models.job import Job
-from app.models.message import Conversation, Message
-from app.models.student import Student
+from app.mongo import Doc, contains, doc, docs, next_id, utcnow
 from app.schemas.message import (
     CompanyBrief,
     ConversationDetailOut,
@@ -23,7 +21,6 @@ from app.schemas.message import (
 )
 from app.schemas.student import StudentSummary
 from app.services.file_service import picture_url
-from app.services.student_service import like_pattern
 
 
 @dataclass
@@ -35,27 +32,35 @@ class Participant:
     company_id: int | None = None
     student_id: int | None = None
 
-    def owns(self, conversation: Conversation) -> bool:
+    def owns(self, thread: Doc) -> bool:
         if self.side == "company":
-            return conversation.company_id == self.company_id
-        return conversation.student_id == self.student_id
+            return thread.company_id == self.company_id
+        return thread.student_id == self.student_id
 
 
-def _from_other_side(participant: Participant, conversation_student_id):
-    """SQL condition: message was sent by the *other* side of the thread."""
+def _from_other_side(participant: Participant, thread: Doc) -> dict[str, Any]:
+    """Mongo filter: message was sent by the *other* side of the thread."""
 
     if participant.side == "company":
-        return Message.sender_account_id == conversation_student_id
-    return or_(Message.sender_account_id.is_(None), Message.sender_account_id != conversation_student_id)
+        return {"sender_account_id": thread.student_id}
+    return {"sender_account_id": {"$ne": thread.student_id}}
 
 
-def _scope(participant: Participant):
+def _scope(participant: Participant) -> dict[str, Any]:
     if participant.side == "company":
-        return Conversation.company_id == participant.company_id
-    return Conversation.student_id == participant.student_id
+        return {"company_id": participant.company_id}
+    return {"student_id": participant.student_id}
 
 
-def _company_brief(company: Company) -> CompanyBrief:
+def _load(db: Database, thread: Doc) -> Doc:
+    """Attach the student and company documents the API shapes need."""
+
+    thread["student"] = doc(db.students.find_one({"_id": thread.student_id})) or Doc({})
+    thread["company"] = doc(db.companies.find_one({"_id": thread.company_id})) or Doc({})
+    return thread
+
+
+def _company_brief(company: Doc) -> CompanyBrief:
     return CompanyBrief(
         account_id=company.account_id,
         company_name=company.company_name,
@@ -63,28 +68,19 @@ def _company_brief(company: Company) -> CompanyBrief:
     )
 
 
-def _conversation_out(db: Session, participant: Participant, conversation: Conversation) -> ConversationOut:
-    last = db.scalar(
-        select(Message)
-        .where(Message.conversation_id == conversation.id)
-        .order_by(Message.created_at.desc(), Message.id.desc())
-        .limit(1)
-    )
-    unread = db.scalar(
-        select(func.count(Message.id)).where(
-            Message.conversation_id == conversation.id,
-            Message.read_at.is_(None),
-            _from_other_side(participant, conversation.student_id),
-        )
+def _conversation_out(db: Database, participant: Participant, thread: Doc) -> ConversationOut:
+    last = doc(db.messages.find_one({"thread_id": thread.id}, sort=[("created_at", -1), ("_id", -1)]))
+    unread = db.messages.count_documents(
+        {"thread_id": thread.id, "read_at": None, **_from_other_side(participant, thread)}
     )
     return ConversationOut(
-        id=conversation.id,
-        student=StudentSummary.model_validate(conversation.student),
-        company=_company_brief(conversation.company),
+        id=thread.id,
+        student=StudentSummary.model_validate(thread.student),
+        company=_company_brief(thread.company),
         last_message=LastMessage(
             body=last.body,
             created_at=last.created_at,
-            sender_side="student" if last.sender_account_id == conversation.student_id else "company",
+            sender_side="student" if last.sender_account_id == thread.student_id else "company",
         )
         if last
         else None,
@@ -92,86 +88,73 @@ def _conversation_out(db: Session, participant: Participant, conversation: Conve
     )
 
 
-def _get_conversation(db: Session, participant: Participant, conversation_id: int) -> Conversation:
-    conversation = db.scalar(
-        select(Conversation)
-        .options(joinedload(Conversation.student), joinedload(Conversation.company))
-        .where(Conversation.id == conversation_id)
-    )
-    if conversation is None or not participant.owns(conversation):
+def _get_thread(db: Database, participant: Participant, thread_id: int) -> Doc:
+    thread = doc(db.message_threads.find_one({"_id": thread_id}))
+    if thread is None or not participant.owns(thread):
         raise NotFoundError("Conversation not found")
-    return conversation
+    return _load(db, thread)
 
 
 def list_conversations(
-    db: Session, participant: Participant, *, q: str | None = None, unread_only: bool = False
+    db: Database, participant: Participant, *, q: str | None = None, unread_only: bool = False
 ) -> list[ConversationOut]:
-    query = (
-        select(Conversation)
-        .options(joinedload(Conversation.student), joinedload(Conversation.company))
-        .join(Student, Student.account_id == Conversation.student_id)
-        .join(Company, Company.account_id == Conversation.company_id)
-        .where(_scope(participant))
-    )
+    query = _scope(participant)
     if q:
-        name_column = Student.name if participant.side == "company" else Company.company_name
-        query = query.where(name_column.ilike(like_pattern(q)))
-
-    # NULL last_message_at (a thread with no messages yet) sorts last.
-    rows = db.scalars(
-        query.order_by(Conversation.last_message_at.is_(None), Conversation.last_message_at.desc())
-    ).unique().all()
-    conversations = [_conversation_out(db, participant, row) for row in rows]
+        if participant.side == "company":
+            ids = [row["_id"] for row in db.students.find({"name": contains(q)}, {"_id": 1})]
+            query["student_id"] = {"$in": ids}
+        else:
+            ids = [row["_id"] for row in db.companies.find({"company_name": contains(q)}, {"_id": 1})]
+            query["company_id"] = {"$in": ids}
+    threads = docs(db.message_threads.find(query))
+    # Threads with no messages yet (last_message_at None) sort last.
+    threads.sort(key=lambda t: (t.last_message_at is None, -(t.last_message_at.timestamp() if t.last_message_at else 0)))
+    conversations = [_conversation_out(db, participant, _load(db, thread)) for thread in threads]
     if unread_only:
         conversations = [item for item in conversations if item.unread_count > 0]
     return conversations
 
 
-def start_conversation(db: Session, participant: Participant, student_id: int) -> ConversationOut:
+def start_conversation(db: Database, participant: Participant, student_id: int) -> ConversationOut:
     if participant.side != "company":
         raise ForbiddenError("Only companies can start conversations")
-    if db.get(Student, student_id) is None:
+    if db.students.find_one({"_id": student_id}, {"_id": 1}) is None:
         raise NotFoundError("Student not found")
+    thread = db.message_threads.find_one({"company_id": participant.company_id, "student_id": student_id})
+    if thread is None:
+        thread = {
+            "_id": next_id(db, "message_threads"),
+            "company_id": participant.company_id,
+            "student_id": student_id,
+            "created_at": utcnow(),
+            "last_message_at": None,
+        }
+        try:
+            db.message_threads.insert_one(thread)
+        except DuplicateKeyError:  # started concurrently by a teammate
+            thread = db.message_threads.find_one({"company_id": participant.company_id, "student_id": student_id})
+    return _conversation_out(db, participant, _get_thread(db, participant, thread["_id"]))
 
-    conversation = db.scalar(
-        select(Conversation).where(
-            Conversation.company_id == participant.company_id, Conversation.student_id == student_id
-        )
-    )
-    if conversation is None:
-        conversation = Conversation(company_id=participant.company_id, student_id=student_id)
-        db.add(conversation)
-        db.commit()
-    return _conversation_out(db, participant, _get_conversation(db, participant, conversation.id))
 
-
-def _sender_names(db: Session, conversation: Conversation, messages: list[Message]) -> dict[int, str]:
-    company_senders = {
-        m.sender_account_id for m in messages if m.sender_account_id not in (None, conversation.student_id)
-    }
-    names = {conversation.student_id: conversation.student.name}
+def _sender_names(db: Database, thread: Doc, messages: list[Doc]) -> dict[int, str]:
+    company_senders = {m.sender_account_id for m in messages if m.sender_account_id not in (None, thread.student_id)}
+    names = {thread.student_id: thread.student.name}
     if company_senders:
-        rows = db.execute(
-            select(CompanyMember.account_id, CompanyMember.name).where(
-                CompanyMember.account_id.in_(company_senders)
-            )
-        ).all()
-        company_name = conversation.company.company_name
-        names.update(
-            {
-                account_id: name if name == company_name else f"{name} · {company_name}"
-                for account_id, name in rows
-            }
-        )
+        company_name = thread.company.company_name
+        for row in db.company_members.find({"account_id": {"$in": list(company_senders)}}, {"account_id": 1, "name": 1}):
+            name = row["name"]
+            names[row["account_id"]] = name if name == company_name else f"{name} · {company_name}"
     return names
 
 
-def _message_out(message: Message, conversation: Conversation, participant: Participant, names) -> MessageOut:
-    side = "student" if message.sender_account_id == conversation.student_id else "company"
+def _message_out(db: Database, message: Doc, thread: Doc, participant: Participant, names) -> MessageOut:
+    side = "student" if message.sender_account_id == thread.student_id else "company"
     if message.sender_account_id is None:
-        name = f"Former teammate · {conversation.company.company_name}"
+        name = f"Former teammate · {thread.company.company_name}"
     else:
-        name = names.get(message.sender_account_id, conversation.company.company_name)
+        name = names.get(message.sender_account_id, thread.company.company_name)
+    job = doc(db.jobs.find_one({"_id": message.job_id}, {"title": 1})) if message.job_id else None
+    event = doc(db.events.find_one({"_id": message.event_id}, {"name": 1, "event_date": 1})) if message.event_id else None
     return MessageOut(
         id=message.id,
         body=message.body,
@@ -180,83 +163,66 @@ def _message_out(message: Message, conversation: Conversation, participant: Part
         sender_side=side,
         sender_name=name,
         from_me=side == participant.side,
-        job=JobRef(id=message.job.id, title=message.job.title) if message.job else None,
-        event=EventRef(id=message.event.id, name=message.event.name, event_date=message.event.event_date)
-        if message.event
-        else None,
+        job=JobRef(id=job.id, title=job.title) if job else None,
+        event=EventRef(id=event.id, name=event.name, event_date=event.event_date) if event else None,
     )
 
 
-def get_conversation(db: Session, participant: Participant, conversation_id: int) -> ConversationDetailOut:
-    conversation = _get_conversation(db, participant, conversation_id)
-    messages = db.scalars(
-        select(Message)
-        .options(joinedload(Message.job), joinedload(Message.event))
-        .where(Message.conversation_id == conversation.id)
-        .order_by(Message.created_at, Message.id)
-    ).all()
-    names = _sender_names(db, conversation, messages)
+def get_conversation(db: Database, participant: Participant, conversation_id: int) -> ConversationDetailOut:
+    thread = _get_thread(db, participant, conversation_id)
+    messages = docs(db.messages.find({"thread_id": thread.id}).sort([("created_at", 1), ("_id", 1)]))
+    names = _sender_names(db, thread, messages)
     return ConversationDetailOut(
-        **_conversation_out(db, participant, conversation).model_dump(),
-        messages=[_message_out(m, conversation, participant, names) for m in messages],
+        **_conversation_out(db, participant, thread).model_dump(),
+        messages=[_message_out(db, m, thread, participant, names) for m in messages],
     )
 
 
 def send_message(
-    db: Session, participant: Participant, conversation_id: int, payload: MessageCreate
+    db: Database, participant: Participant, conversation_id: int, payload: MessageCreate
 ) -> MessageOut:
-    conversation = _get_conversation(db, participant, conversation_id)
-
+    thread = _get_thread(db, participant, conversation_id)
     if (payload.job_id or payload.event_id) and participant.side != "company":
         raise ForbiddenError("Only companies can attach jobs or events")
     if payload.job_id is not None:
-        job = db.get(Job, payload.job_id)
-        if job is None or job.company_id != conversation.company_id:
+        job = db.jobs.find_one({"_id": payload.job_id}, {"company_id": 1})
+        if job is None or job["company_id"] != thread.company_id:
             raise BadRequestError("That job doesn't belong to your company")
     if payload.event_id is not None:
-        event = db.get(Event, payload.event_id)
-        if event is None or event.company_id != conversation.company_id:
+        event = db.events.find_one({"_id": payload.event_id}, {"company_id": 1})
+        if event is None or event["company_id"] != thread.company_id:
             raise BadRequestError("That event doesn't belong to your company")
 
-    message = Message(
-        conversation_id=conversation.id,
-        sender_account_id=participant.account_id,
-        body=payload.body,
-        job_id=payload.job_id,
-        event_id=payload.event_id,
+    now = utcnow()
+    message = {
+        "_id": next_id(db, "messages"),
+        "thread_id": thread.id,
+        "sender_account_id": participant.account_id,
+        "body": payload.body,
+        "job_id": payload.job_id,
+        "event_id": payload.event_id,
+        "created_at": now,
+        "read_at": None,
+    }
+    db.messages.insert_one(message)
+    db.message_threads.update_one({"_id": thread.id}, {"$set": {"last_message_at": now}})
+    message = Doc(message)
+    return _message_out(db, message, thread, participant, _sender_names(db, thread, [message]))
+
+
+def mark_read(db: Database, participant: Participant, conversation_id: int) -> int:
+    thread = _get_thread(db, participant, conversation_id)
+    result = db.messages.update_many(
+        {"thread_id": thread.id, "read_at": None, **_from_other_side(participant, thread)},
+        {"$set": {"read_at": utcnow()}},
     )
-    db.add(message)
-    db.flush()
-    db.refresh(message)
-    conversation.last_message_at = message.created_at
-    db.commit()
-    db.refresh(message)
-    names = _sender_names(db, conversation, [message])
-    return _message_out(message, conversation, participant, names)
+    return result.modified_count
 
 
-def mark_read(db: Session, participant: Participant, conversation_id: int) -> int:
-    conversation = _get_conversation(db, participant, conversation_id)
-    result = db.execute(
-        update(Message)
-        .where(
-            Message.conversation_id == conversation.id,
-            Message.read_at.is_(None),
-            _from_other_side(participant, conversation.student_id),
+def unread_total(db: Database, company_id: int) -> int:
+    total = 0
+    for thread in db.message_threads.find({"company_id": company_id}, {"student_id": 1}):
+        total += db.messages.count_documents(
+            {"thread_id": thread["_id"], "read_at": None, "sender_account_id": thread["student_id"]}
         )
-        .values(read_at=datetime.now())
-    )
-    db.commit()
-    return result.rowcount
-
-
-def unread_total(db: Session, company_id: int) -> int:
-    return db.scalar(
-        select(func.count(Message.id))
-        .join(Conversation, Conversation.id == Message.conversation_id)
-        .where(
-            Conversation.company_id == company_id,
-            Message.read_at.is_(None),
-            Message.sender_account_id == Conversation.student_id,
-        )
-    )
+    return total

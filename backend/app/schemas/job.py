@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.models.job import JOB_CATEGORIES
+from app.constants import JOB_CATEGORIES
 from app.schemas.common import clean_optional_text, clean_required_text
 
 

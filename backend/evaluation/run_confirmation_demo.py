@@ -16,19 +16,17 @@ from datetime import datetime
 
 from eval_common import DEFAULT_STUDENT, EVALUATION_DIR, render_run, student_context, timed, write
 
-from sqlalchemy import delete, select  # noqa: E402
 
 from app.assistant.agent import resume_assistant, run_assistant  # noqa: E402
 from app.assistant.llm_client import OllamaClient  # noqa: E402
-from app.database import SessionLocal  # noqa: E402
-from app.models.saved_item import SavedItem  # noqa: E402
+from app.mongo import Doc, get_database  # noqa: E402
 
 ACKNOWLEDGES = re.compile(r"cancel|not (been )?saved|won't|will not|didn't|did not|declin|okay|no problem", re.IGNORECASE)
 
 
 def saved_job_ids(db, student_id: int) -> set[int]:
     return set(
-        db.scalars(select(SavedItem.item_id).where(SavedItem.student_id == student_id, SavedItem.item_type == "job"))
+        row["item_id"] for row in db.saved_items.find({"student_id": student_id, "item_type": "job"})
     )
 
 
@@ -37,7 +35,8 @@ def main() -> int:
     checks: list[tuple[bool, str]] = []
     sections: list[str] = []
 
-    with SessionLocal() as db:
+    db = get_database()
+    if True:
         context = student_context(db, DEFAULT_STUDENT)
         already = saved_job_ids(db, context.account_id)
         job_id = next(candidate for candidate in (24, 57, 90, 123, 156) if candidate not in already)
@@ -63,8 +62,7 @@ def main() -> int:
             if approved:
                 checks.append((saved_now, f"[approve] job {job_id} is saved"))
                 checks.append((statuses.count("ok") == 1 and second.run.pending_action is None, "[approve] the save ran exactly once"))
-                db.execute(delete(SavedItem).where(SavedItem.student_id == context.account_id, SavedItem.item_id == job_id, SavedItem.item_type == "job"))
-                db.commit()
+                db.saved_items.delete_many({"student_id": context.account_id, "item_id": job_id, "item_type": "job"})
             else:
                 checks.append((not saved_now, f"[decline] job {job_id} is not saved"))
                 checks.append((second.run.conversation[len(first.run.conversation)]["content"].startswith("CANCELLED:"), "[decline] model received a cancellation string"))

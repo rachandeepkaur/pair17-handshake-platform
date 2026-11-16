@@ -15,8 +15,6 @@ SECRETS_FILE=k8s/secrets.env
 if [[ ! -f $SECRETS_FILE ]]; then
   umask 077
   {
-    echo "MYSQL_ROOT_PASSWORD=$(openssl rand -hex 16)"
-    echo "DB_PASSWORD=$(openssl rand -hex 16)"
     echo "MONGO_PASSWORD=$(openssl rand -hex 16)"
     echo "JWT_SECRET=$(openssl rand -hex 32)"
   } > "$SECRETS_FILE"
@@ -29,21 +27,18 @@ kubectl apply -f k8s/base/namespace.yaml
 kubectl -n "$NS" create secret generic p17-handshake-secrets \
   --from-env-file="$SECRETS_FILE" --dry-run=client -o yaml | kubectl apply -f -
 
-# kustomize cannot read files outside k8s/, so the schema ConfigMap is built here.
-kubectl -n "$NS" create configmap p17-mysql-init \
-  --from-file=01-schema.sql=backend/db/schema.sql --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl apply -k k8s/base
 
 echo "Waiting for data stores..."
-for sts in p17-mysql p17-mongodb p17-kafka; do
+for sts in p17-mongodb p17-kafka; do
   kubectl -n "$NS" rollout status "statefulset/$sts" --timeout=300s
 done
 kubectl -n "$NS" wait --for=condition=complete job/p17-kafka-topics --timeout=300s
 echo "Waiting for services and workers..."
 for deploy in p17-student-service p17-company-service p17-job-service p17-application-service \
               p17-event-service p17-assistant-service p17-frontend \
-              p17-application-worker p17-event-worker p17-job-worker; do
+              p17-application-worker p17-event-worker p17-job-worker p17-memory-worker; do
   kubectl -n "$NS" rollout status "deployment/$deploy" --timeout=300s
 done
 

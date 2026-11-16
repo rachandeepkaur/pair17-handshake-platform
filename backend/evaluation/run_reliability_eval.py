@@ -25,7 +25,7 @@ from eval_common import DEFAULT_STUDENT, EVALUATION_DIR, TimedRun, render_run, s
 
 from app.assistant.agent import run_assistant  # noqa: E402
 from app.assistant.llm_client import OllamaClient  # noqa: E402
-from app.database import SessionLocal  # noqa: E402
+from app.mongo import Doc, get_database  # noqa: E402
 
 PREFS = "get_student_preferences"
 JOBS = "search_jobs"
@@ -134,7 +134,8 @@ def main() -> int:
     sections: list[str] = []
     outcomes: dict[bool, list[Outcome]] = {False: [], True: []}
 
-    with SessionLocal() as db:
+    db = get_database()
+    if True:
         context = student_context(db, DEFAULT_STUDENT)
         for repair in (False, True):
             label = "AFTER (repair on)" if repair else "BEFORE (repair off)"

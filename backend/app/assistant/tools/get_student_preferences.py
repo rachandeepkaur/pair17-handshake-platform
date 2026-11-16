@@ -3,8 +3,7 @@
 from typing import Any
 
 from app.assistant.tools.schemas import AssistantContext, ToolDefinition
-from app.models.preference import Preference
-from app.models.student import Student
+from app.mongo import doc
 
 
 def get_student_preferences(context: AssistantContext, _arguments: dict[str, Any]) -> str:
@@ -12,8 +11,8 @@ def get_student_preferences(context: AssistantContext, _arguments: dict[str, Any
         return "Student preferences are unavailable."
 
     try:
-        preference = context.db.get(Preference, context.account_id)
-        student = context.db.get(Student, context.account_id)
+        preference = doc(context.db.preferences.find_one({"_id": context.account_id}))
+        student = doc(context.db.students.find_one({"_id": context.account_id}))
     except Exception:
         return "Student preferences are unavailable."
 
@@ -30,7 +29,7 @@ def get_student_preferences(context: AssistantContext, _arguments: dict[str, Any
     return result
 
 
-def _preference_parts(preference: Preference) -> list[str]:
+def _preference_parts(preference) -> list[str]:
     parts = []
     if preference.preferred_categories:
         parts.append(f"categories: {preference.preferred_categories}")
@@ -45,7 +44,7 @@ def _preference_parts(preference: Preference) -> list[str]:
     return parts
 
 
-def _profile_parts(student: Student | None) -> list[str]:
+def _profile_parts(student) -> list[str]:
     if student is None:
         return []
     parts = []
@@ -58,7 +57,7 @@ def _profile_parts(student: Student | None) -> list[str]:
     return parts
 
 
-def _has_saved_values(preference: Preference) -> bool:
+def _has_saved_values(preference) -> bool:
     return any(
         (
             preference.preferred_categories,

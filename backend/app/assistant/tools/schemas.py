@@ -4,7 +4,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from sqlalchemy.orm import Session
+from pymongo.database import Database
 
 
 Message = dict[str, Any]
@@ -16,7 +16,9 @@ class AssistantContext:
 
     account_id: int
     role: str
-    db: Session | None = None
+    db: Database | None = None
+    # Assistant memory layers injected into the prompt (see app.assistant.memory).
+    memory_prompt: str = ""
 
 
 @dataclass(frozen=True)

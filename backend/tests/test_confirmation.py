@@ -6,10 +6,10 @@ from app.assistant.agent import resume_assistant, run_assistant
 from app.assistant.confirmation import CANCELLED_PREFIX, Decision, confirm_action, pending_action
 from app.assistant.llm_client import get_model_client
 from app.assistant.tools.schemas import AssistantContext, AssistantMessage, Message, ToolCall, ToolDefinition, ToolRegistry
-from app.database import get_db
+from app.mongo import get_db
 from app.dependencies import get_current_user
 from app.main import app
-from app.models.account import Account, AccountRole
+from app.mongo import Doc
 
 
 SAVE_CALL = ToolCall(name="save_job_or_event", arguments={"item_type": "job", "item_id": 7})
@@ -168,7 +168,7 @@ def test_new_message_while_pending_counts_as_decline() -> None:
 
 
 def test_confirm_endpoint_resumes_and_rejects_when_nothing_is_pending() -> None:
-    account = Account(id=1, email="student@example.com", password_hash="unused", role=AccountRole.STUDENT)
+    account = Doc({"_id": 1, "email": "student@example.com", "password_hash": "unused", "role": "student"})
     client = FakeClient([AssistantMessage(content="Cancelled, nothing was saved.")])
     app.dependency_overrides[get_current_user] = lambda: account
     app.dependency_overrides[get_db] = lambda: object()

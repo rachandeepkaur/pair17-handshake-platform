@@ -1,0 +1,3 @@
+-r requirements-base.txt
+# Only the one-time MySQL -> MongoDB migration reads MySQL.
+pymysql==1.1.1

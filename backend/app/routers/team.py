@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Response
-from sqlalchemy.orm import Session
+from pymongo.database import Database
 
-from app.core.security import create_access_token
+from app.core.sessions import create_session
 from app.dependencies import CompanyContext, get_db, require_company, require_permission
 from app.schemas.auth import TokenResponse
 from app.schemas.team import (
@@ -29,7 +29,7 @@ def get_me(ctx: CompanyContext = Depends(require_company)) -> MembershipOut:
 @router.patch("/me", response_model=MembershipOut, summary="Update your display name")
 def update_me(
     payload: MyMemberUpdate,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     ctx: CompanyContext = Depends(require_company),
 ) -> MembershipOut:
     return team_service.update_my_name(db, ctx, payload.name)
@@ -42,7 +42,7 @@ def get_permissions(_: CompanyContext = Depends(require_company)) -> PermissionM
 
 @router.get("/members", response_model=list[MemberOut], summary="List teammates")
 def list_members(
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     ctx: CompanyContext = Depends(require_company),
 ) -> list[MemberOut]:
     return team_service.list_members(db, ctx)
@@ -52,7 +52,7 @@ def list_members(
 def update_member(
     member_id: int,
     payload: MemberRoleUpdate,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     ctx: CompanyContext = Depends(require_permission("team:manage")),
 ) -> MemberOut:
     return team_service.update_member_role(db, ctx, member_id, payload.role)
@@ -61,7 +61,7 @@ def update_member(
 @router.delete("/members/{member_id}", status_code=204, summary="Remove a teammate (deletes their login)")
 def remove_member(
     member_id: int,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     ctx: CompanyContext = Depends(require_permission("team:manage")),
 ) -> Response:
     team_service.remove_member(db, ctx, member_id)
@@ -70,7 +70,7 @@ def remove_member(
 
 @router.get("/invitations", response_model=list[InvitationOut], summary="List pending invitations")
 def list_invitations(
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     ctx: CompanyContext = Depends(require_permission("team:manage")),
 ) -> list[InvitationOut]:
     return team_service.list_invitations(db, ctx)
@@ -84,7 +84,7 @@ def list_invitations(
 )
 def create_invitation(
     payload: InvitationCreate,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     ctx: CompanyContext = Depends(require_permission("team:manage")),
 ) -> InvitationWithToken:
     return team_service.create_invitation(db, ctx, payload)
@@ -97,7 +97,7 @@ def create_invitation(
 )
 def regenerate_invitation(
     invitation_id: int,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     ctx: CompanyContext = Depends(require_permission("team:manage")),
 ) -> InvitationWithToken:
     return team_service.regenerate_invitation(db, ctx, invitation_id)
@@ -106,7 +106,7 @@ def regenerate_invitation(
 @router.delete("/invitations/{invitation_id}", status_code=204, summary="Revoke an invitation")
 def revoke_invitation(
     invitation_id: int,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     ctx: CompanyContext = Depends(require_permission("team:manage")),
 ) -> Response:
     team_service.revoke_invitation(db, ctx, invitation_id)
@@ -120,7 +120,7 @@ def revoke_invitation(
     response_model=InvitationPreview,
     summary="Preview an invitation from its link (no auth)",
 )
-def preview_invitation(token: str, db: Session = Depends(get_db)) -> InvitationPreview:
+def preview_invitation(token: str, db: Database = Depends(get_db)) -> InvitationPreview:
     return team_service.preview_invitation(db, token)
 
 
@@ -129,9 +129,9 @@ def preview_invitation(token: str, db: Session = Depends(get_db)) -> InvitationP
     response_model=TokenResponse,
     summary="Accept an invitation: creates the login and signs in (no auth)",
 )
-def accept_invitation(token: str, payload: InvitationAccept, db: Session = Depends(get_db)) -> TokenResponse:
+def accept_invitation(token: str, payload: InvitationAccept, db: Database = Depends(get_db)) -> TokenResponse:
     account = team_service.accept_invitation(db, token, payload)
     return TokenResponse(
-        access_token=create_access_token(subject=str(account.id), role=account.role),
+        access_token=create_session(db, account),
         role=account.role,
     )

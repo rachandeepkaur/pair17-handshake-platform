@@ -2,6 +2,8 @@ from datetime import date, time
 from decimal import Decimal
 from types import SimpleNamespace
 
+import mongomock
+
 from app.assistant.prompts import system_prompt_for_role
 from app.assistant.registry import tool_registry_for_role
 from app.assistant.tools.get_job_details import get_job_details
@@ -49,11 +51,21 @@ def test_platform_options_returns_configured_search_vocabulary(monkeypatch) -> N
     assert "internship" in result
 
 
-def test_get_student_preferences_reports_missing_preferences(monkeypatch) -> None:
-    monkeypatch.setattr("app.assistant.tools.get_student_preferences.Preference", object())
-    context = AssistantContext(account_id=12, role="student", db=SimpleNamespace(get=lambda *_args: None))
+def test_get_student_preferences_reports_missing_preferences() -> None:
+    db = mongomock.MongoClient()["tools"]
+    context = AssistantContext(account_id=12, role="student", db=db)
 
     assert get_student_preferences(context, {}) == "No saved job or event preferences are available for this student."
+
+
+def test_get_student_preferences_reads_preferences_and_profile() -> None:
+    db = mongomock.MongoClient()["tools"]
+    db.preferences.insert_one({"_id": 12, "preferred_cities": "Palo Alto", "remote_ok": True})
+    db.students.insert_one({"_id": 12, "major": "Data Science", "city": "Menlo Park"})
+
+    result = get_student_preferences(AssistantContext(account_id=12, role="student", db=db), {})
+
+    assert "cities: Palo Alto" in result and "remote work: accepted" in result and "major: Data Science" in result
 
 
 def test_search_jobs_passes_all_supported_filters(monkeypatch) -> None:
@@ -141,32 +153,20 @@ def test_search_events_passes_date_and_eligibility_filters(monkeypatch) -> None:
 
 
 def test_save_job_or_event_creates_a_saved_item(monkeypatch) -> None:
-    added = []
-    committed = []
-    db = SimpleNamespace(
-        scalar=lambda _query: None,
-        add=added.append,
-        commit=lambda: committed.append(True),
-        rollback=lambda: None,
-    )
+    db = mongomock.MongoClient()["tools"]
     monkeypatch.setattr("app.assistant.tools.save_job_or_event._visibility_error", lambda *_args: None)
 
     result = save_job_or_event(AssistantContext(account_id=12, role="student", db=db), {"item_type": "job", "item_id": 4})
 
     assert result == "Saved job 4 for this student."
-    assert added[0].student_id == 12
-    assert added[0].item_type == "job"
-    assert added[0].item_id == 4
-    assert committed == [True]
+    saved = db.saved_items.find_one({})
+    assert (saved["student_id"], saved["item_type"], saved["item_id"]) == (12, "job", 4)
+    assert db.activity_logs.find_one({})["action"] == "item.saved"
 
 
 def test_save_job_or_event_rejects_duplicates() -> None:
-    db = SimpleNamespace(
-        scalar=lambda _query: 8,
-        add=lambda _item: None,
-        commit=lambda: None,
-        rollback=lambda: None,
-    )
+    db = mongomock.MongoClient()["tools"]
+    db.saved_items.insert_one({"_id": 8, "student_id": 12, "item_type": "event", "item_id": 7})
 
     result = save_job_or_event(AssistantContext(account_id=12, role="student", db=db), {"item_type": "event", "item_id": 7})
 

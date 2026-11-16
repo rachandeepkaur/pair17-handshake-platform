@@ -18,6 +18,7 @@ import logging
 import os
 import signal
 import sys
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -92,8 +93,20 @@ def configure_logging(worker: str) -> None:
     logging.getLogger("pymongo").setLevel(logging.WARNING)
 
 
-def run_worker(worker: str, topics: tuple[str, ...], build_handler: Callable[[Any], Handler]) -> None:
-    """Consume `topics` as consumer group p17-<worker> until SIGTERM/SIGINT."""
+def run_worker(
+    worker: str,
+    topics: tuple[str, ...],
+    build_handler: Callable[[Any], Handler],
+    *,
+    max_poll_interval_ms: int = 300_000,
+    max_processing_seconds: float = 120.0,
+) -> None:
+    """Consume `topics` as consumer group p17-<worker> until SIGTERM/SIGINT.
+
+    A background thread writes the health heartbeat while the loop is idle or a
+    message has been processing for less than max_processing_seconds, so a slow
+    (model-bound) handler stays healthy but a stuck one does not.
+    """
 
     from confluent_kafka import Consumer, KafkaException, Producer
     from pymongo import MongoClient
@@ -110,7 +123,7 @@ def run_worker(worker: str, topics: tuple[str, ...], build_handler: Callable[[An
             "client.id": f"{group}-{os.getpid()}",
             "enable.auto.commit": False,  # commit only after the database write
             "auto.offset.reset": "earliest",
-            "max.poll.interval.ms": 300000,
+            "max.poll.interval.ms": max_poll_interval_ms,
         }
     )
     dlq_producer = Producer(
@@ -123,6 +136,16 @@ def run_worker(worker: str, topics: tuple[str, ...], build_handler: Callable[[An
     )
 
     running = True
+    busy_since: list[float | None] = [None]
+
+    def beat() -> None:
+        while running:
+            started = busy_since[0]
+            if started is None or time.time() - started < max_processing_seconds:
+                _heartbeat()
+            time.sleep(10)
+
+    threading.Thread(target=beat, name="heartbeat", daemon=True).start()
 
     def stop(signum: int, _frame: Any) -> None:
         nonlocal running
@@ -148,6 +171,7 @@ def run_worker(worker: str, topics: tuple[str, ...], build_handler: Callable[[An
         key = msg.key().decode("utf-8", "replace") if msg.key() else None
         where = f"{msg.topic()}[{msg.partition()}]@{msg.offset()} key={key}"
         logger.info("received %s", where)
+        busy_since[0] = time.time()
 
         while True:
             try:
@@ -193,6 +217,7 @@ def run_worker(worker: str, topics: tuple[str, ...], build_handler: Callable[[An
             time.sleep(settings.worker_pause_after_write_seconds)
 
         consumer.commit(message=msg, asynchronous=False)
+        busy_since[0] = None
         logger.info("committed offset %d for %s[%d]", msg.offset() + 1, msg.topic(), msg.partition())
 
     consumer.close()

@@ -22,7 +22,7 @@ This Zoom recording demonstrates the application from both the student and compa
 
 - Python 3.11+
 - Node.js 18+
-- MySQL 8+
+- MongoDB 7 (MySQL 8 only to migrate Lab 1 data)
 - [Ollama](https://ollama.com) (serves the local model used by the AI assistant)
 
 ## Setup
@@ -35,21 +35,18 @@ cd pair17-handshake-platform
 cp frontend/.env.example frontend/.env
 ```
 
-Create a root `.env` file with your local MySQL credentials. Pair 17 uses Palo Alto, Mountain View, and Menlo Park.
+Create a root `.env` with `MONGO_URI` (default `mongodb://localhost:27017`), `MONGO_DB`, and `CITY_SET`.
+Pair 17 uses Palo Alto, Mountain View, and Menlo Park.
 
-### 2. Database
-
-```bash
-mysql -u root -p < backend/db/schema.sql
-```
-
-Upgrading a database created before team accounts and messaging existed? Apply
-the migration instead (safe to re-run). It adds the team and messaging tables
-and makes each existing company's signup account its owner:
+### 2. Database (MongoDB)
 
 ```bash
-mysql -u root -p < backend/db/migrations/001_team_messages.sql
+docker run -d --name p17-mongo-local -p 27017:27017 mongo:7.0
 ```
+
+Indexes are created automatically when a service starts. The Lab 1 MySQL schema files
+(`backend/db/schema.sql`, `migrations/`) are kept only as the source for
+`backend/db/migrate_mysql_to_mongo.py`.
 
 Populate a fresh database with deterministic demo data (50 companies, 200
 students, 300 jobs, 1,500 applications, and 100 events) with:
@@ -115,11 +112,11 @@ requirements, and mounts only its routers (`backend/app/entrypoints/`).
 | `p17-event-service` | `p17-event-service` | 9175 | `/events`, `/student/events` |
 | `p17-assistant-service` | `p17-assistant-service` | 9176 | `/assistant` (uses Ollama on the host) |
 | `p17-mongodb` | `mongo:7.0` | 9177 | MongoDB |
-| `p17-mysql` | `mysql:8.0` | 9178 | MySQL (Lab 1 system of record, schema loaded on first start) |
+| `p17-mysql` | `mysql:8.0` | 9178 | Lab 1 MySQL, profile `migrate` only (source for the MongoDB migration) |
 | `p17-kafka` | `apache/kafka:3.8.0` | 9179 | Kafka, single-node KRaft (`p17-kafka:9092` inside the network) |
 
 Every service exposes `GET /health/live` (process up) and `GET /health` (200 only when
-MySQL, MongoDB, and Kafka are reachable, 503 otherwise). The Docker `HEALTHCHECK` and
+MongoDB and Kafka are reachable, 503 otherwise). The Docker `HEALTHCHECK` and
 compose `depends_on: service_healthy` use `/health`. The assistant's `/health` also reports
 Ollama and the other platform services. Through the gateway, use
 `http://localhost:9170/api/health/<service>`.
@@ -158,14 +155,13 @@ curl -s http://localhost:9170/api/health/assistant   # a service's /health throu
 curl -s http://localhost:9173/health                 # a service's /health on its own port
 docker inspect --format '{{json .State.Health}}' p17-job-service   # Docker health-check history
 docker network inspect p17-handshake-net             # containers attached to the network
-docker compose exec p17-mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" p17_handshake -e "SHOW TABLES"'
 docker compose exec p17-mongodb mongosh -u p17_admin -p p17_mongo_pass --quiet --eval 'db.adminCommand("ping")'
 ```
 
 **Verify** frontend → backend, backend → databases, and assistant → platform services:
 
 ```bash
-scripts/verify_local.sh                    # health, gateway routing, MySQL and MongoDB, assistant reach
+scripts/verify_local.sh                    # health, gateway routing, MongoDB, assistant reach
 scripts/verify_local.sh --chat --failover  # + one real assistant turn, + MongoDB outage and recovery
 ```
 
@@ -174,15 +170,62 @@ scripts/verify_local.sh --chat --failover  # + one real assistant turn, + MongoD
 ```bash
 docker compose stop                        # stop containers, keep them and their data
 docker compose down                        # remove containers and network, keep data volumes
-docker compose --profile seed down -v      # also delete the MySQL, MongoDB, Kafka, and upload volumes
+docker compose --profile seed --profile migrate down -v   # also delete the MongoDB, Kafka, MySQL, and upload volumes
 ```
 
 Optional overrides in the root `.env`: `P17_DB_PASSWORD`, `P17_MYSQL_ROOT_PASSWORD`,
 `P17_MONGO_PASSWORD`, `JWT_SECRET`, `OLLAMA_MODEL`, `P17_OLLAMA_HOST`.
 
+## MongoDB data layer (Lab 2)
+
+MongoDB is the system of record. `backend/app/mongo.py` holds the client, the indexes, and
+integer-id counters, so API ids, frontend routes, and the Postman collection are unchanged.
+
+| Collection | Contents |
+|---|---|
+| `accounts` | Login: email (unique), **bcrypt** `password_hash`, role |
+| `students`, `companies`, `preferences` | Profiles (`_id` = account id) and student preferences |
+| `sessions` | One per login: `_id` = SHA-256 of the token's `sid`, `expires_at` with a **TTL index**, `revoked_at` |
+| `jobs`, `events` | Postings, with a copy of `company_name` for search |
+| `applications` | Status plus **resume metadata** (`path`, filename, size, SHA-256, upload time) |
+| `registrations`, `saved_items` | Event sign-ups; jobs/events saved through the assistant |
+| `message_threads`, `messages`, `company_members`, `team_invitations` | Messaging and team accounts |
+| `activity_logs` | Logins, logouts, applications, status changes, registrations, saves, profile edits |
+| `assistant_rules`, `student_memory`, `conversations` | Assistant memory (instructions, learned, session) |
+
+- **Sessions:** a token works only while its session document exists, is unrevoked, and is unexpired.
+  `POST /auth/logout` revokes the session, and a password change revokes the account's other sessions.
+- **Migration:** `backend/db/migrate_mysql_to_mongo.py` copies every Lab 1 table, keeping ids and
+  bcrypt hashes. It's idempotent, and `--verify` compares counts.
+
+```bash
+docker compose --profile migrate up -d p17-mysql                  # Lab 1 database (existing volume)
+docker compose --profile migrate run --rm p17-db-migrate          # copy MySQL -> MongoDB, verify counts
+docker stop p17-mysql                                             # the platform no longer needs it
+scripts/mongo_demo.sh                                             # collections, bcrypt, sessions, logout, activity log
+```
+
+## Assistant memory (Lab 2)
+
+| Layer | Collection | Contents |
+|---|---|---|
+| Instructions | `assistant_rules` | Rules always injected first (privacy, always state eligibility, tool facts only, ...) |
+| Learned | `student_memory` | One entry per line: `YYYY-MM-DD \| category \| description` |
+| Session | `conversations` | The current conversation; it expires with the login session. At logout, `p17-memory-worker` compacts it into learned memory and deletes it |
+
+- **Chat commands:** `/memory`, `/memory add <category>: <text>`, `/memory forget <n>`, `/memory consolidate`.
+  They're answered without calling the model and are never sent to the model.
+- **Consolidation:** `/memory consolidate` only publishes `memory.consolidation_requested`. The
+  `p17-memory-worker` Kafka consumer runs the model (one call per category), validates its output,
+  and stores before/after and every decision in `memory_consolidations`.
+
+```bash
+scripts/memory_demo.sh     # seed 60 entries -> /memory -> consolidate -> /memory -> checks (< 40, duplicates, contradictions)
+```
+
 ## Kafka event pipeline (Lab 2)
 
-The APIs publish an event after each MySQL commit; three workers consume them and
+The APIs publish an event after each MongoDB write; three workers consume them and
 maintain MongoDB projections.
 
 | Topic | Producer | Consumer | MongoDB collections |
@@ -221,18 +264,18 @@ resource name starts with `p17-`.
 | `p17-job-service` | Deployment + ClusterIP Service + HPA | 2 (2–6) | 100m/192Mi · 500m/512Mi |
 | `p17-assistant-service` | Deployment + ClusterIP Service + HPA | 1 (1–3) | 100m/256Mi · 1/512Mi |
 | `p17-frontend` | Deployment + LoadBalancer Service (port 9170) + HPA | 2 (2–4) | 50m/64Mi · 250m/128Mi |
-| `p17-mysql`, `p17-mongodb`, `p17-kafka` | StatefulSet + headless Service + 2Gi PVC | 1 | 250m/512–768Mi · 1/1–1.5Gi |
+| `p17-mongodb`, `p17-kafka` | StatefulSet + headless Service + 2Gi PVC | 1 | 250m/512–768Mi · 1/1–1.5Gi |
+| `p17-application-worker`, `p17-event-worker`, `p17-job-worker`, `p17-memory-worker` | Deployment (Kafka consumers) | 2 (memory: 1) | 50m/128Mi · 500m/256–384Mi |
 | `p17-backend-config`, `p17-assistant-config`, `p17-frontend-config` | ConfigMap | | |
 | `p17-handshake-secrets` | Secret (created by `deploy.sh`, never committed) | | |
-| `p17-mysql-init` | ConfigMap built from `backend/db/schema.sql` by `deploy.sh` | | |
 | `p17-uploads` | PVC (ReadWriteMany), shared by student, company, application | | |
 
-- **Service discovery:** pods reach each other by Service name. Examples: `DB_HOST=p17-mysql`,
+- **Service discovery:** pods reach each other by Service name. Examples: `MONGO_HOST=p17-mongodb:27017`,
   `KAFKA_BOOTSTRAP_SERVERS=p17-kafka:9092`, and the assistant's
   `http://p17-job-service:9173`. The nginx gateway uses the FQDN
   `p17-<svc>-service.p17-handshake.svc.cluster.local`, because nginx's resolver ignores
   search domains.
-- **Probes:** readiness uses `GET /health` (MySQL, MongoDB and Kafka reachable). Liveness uses
+- **Probes:** readiness uses `GET /health` (MongoDB and Kafka reachable). Liveness uses
   `GET /health/live`, so a database outage removes a pod from load balancing without restarting it.
 - **Scaling:** the HPAs target 70% CPU of the requests and need metrics-server. Manual scaling:
   `kubectl -n p17-handshake scale deployment/p17-job-service --replicas=4`.

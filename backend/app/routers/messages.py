@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from pymongo.database import Database
 
 from app.core.exceptions import ForbiddenError
 from app.core.permissions import ROLE_LABELS, has_permission
 from app.dependencies import get_current_user, get_db
-from app.models.account import Account
-from app.models.company_member import CompanyMember
+from app.mongo import Doc as Account
+from app.mongo import doc
 from app.schemas.message import (
     ConversationDetailOut,
     ConversationOut,
@@ -34,11 +33,11 @@ class _Caller:
             raise ForbiddenError(f"Your role ({ROLE_LABELS[self.member_role]}) can't send messages")
 
 
-def get_caller(account: Account = Depends(get_current_user), db: Session = Depends(get_db)) -> _Caller:
+def get_caller(account: Account = Depends(get_current_user), db: Database = Depends(get_db)) -> _Caller:
     if account.role == "student":
         return _Caller(Participant(side="student", account_id=account.id, student_id=account.id), None)
 
-    member = db.scalar(select(CompanyMember).where(CompanyMember.account_id == account.id))
+    member = doc(db.company_members.find_one({"account_id": account.id}))
     if member is None:
         raise ForbiddenError("This account is not a member of any company")
     return _Caller(
@@ -51,7 +50,7 @@ def get_caller(account: Account = Depends(get_current_user), db: Session = Depen
 def list_conversations(
     q: str | None = Query(default=None, max_length=150, description="Matches the other side's name"),
     unread_only: bool = False,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     caller: _Caller = Depends(get_caller),
 ) -> list[ConversationOut]:
     return message_service.list_conversations(db, caller.participant, q=q, unread_only=unread_only)
@@ -64,7 +63,7 @@ def list_conversations(
 )
 def start_conversation(
     payload: ConversationStart,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     caller: _Caller = Depends(get_caller),
 ) -> ConversationOut:
     caller.require_write()
@@ -78,7 +77,7 @@ def start_conversation(
 )
 def get_conversation(
     conversation_id: int,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     caller: _Caller = Depends(get_caller),
 ) -> ConversationDetailOut:
     return message_service.get_conversation(db, caller.participant, conversation_id)
@@ -93,7 +92,7 @@ def get_conversation(
 def send_message(
     conversation_id: int,
     payload: MessageCreate,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     caller: _Caller = Depends(get_caller),
 ) -> MessageOut:
     caller.require_write()
@@ -106,7 +105,7 @@ def send_message(
 )
 def mark_read(
     conversation_id: int,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     caller: _Caller = Depends(get_caller),
 ) -> dict[str, int]:
     return {"marked_read": message_service.mark_read(db, caller.participant, conversation_id)}

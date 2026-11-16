@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
+from pymongo.database import Database
 
 from app.dependencies import CompanyContext, get_db, require_company, require_permission
 from app.schemas.application import (
@@ -23,7 +23,7 @@ def list_company_applications(
     job_id: int | None = None,
     student_id: int | None = None,
     status: ApplicationStatus | None = None,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     ctx: CompanyContext = Depends(require_company),
 ) -> list[ApplicationOut]:
     return application_service.list_company_applications(
@@ -38,7 +38,7 @@ def list_company_applications(
 )
 def get_application(
     application_id: int,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     ctx: CompanyContext = Depends(require_company),
 ) -> ApplicationDetailOut:
     return application_service.get_application_detail(db, ctx.company_id, application_id)
@@ -52,10 +52,12 @@ def get_application(
 def update_application_status(
     application_id: int,
     payload: ApplicationStatusUpdate,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     ctx: CompanyContext = Depends(require_permission("applicants:write")),
 ) -> ApplicationOut:
-    return application_service.update_status(db, ctx.company_id, application_id, payload.status)
+    return application_service.update_status(
+        db, ctx.company_id, application_id, payload.status, actor_account_id=ctx.account.id
+    )
 
 
 @router.get(
@@ -65,7 +67,7 @@ def update_application_status(
 )
 def get_resume(
     application_id: int,
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
     ctx: CompanyContext = Depends(require_company),
 ) -> FileResponse:
     path = application_service.resume_file(db, ctx.company_id, application_id)
