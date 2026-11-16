@@ -30,7 +30,7 @@ export default function StudentSearch() {
   const paramKey = searchParams.toString()
   useEffect(() => {
     setDraft(Object.fromEntries(FIELDS.map(({ name }) => [name, searchParams.get(name) || ''])))
-  }, [paramKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   const { data, loading, error } = useFetch(
     () => searchStudents({ ...filters, limit: PAGE_SIZE, offset }),

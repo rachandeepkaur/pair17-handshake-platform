@@ -74,7 +74,7 @@ export default function Applicants() {
   const handleUpdated = (updated) =>
     applications.setData((list) => list.map((item) => (item.id === updated.id ? updated : item)))
 
-  const list = applications.data || []
+  const list = useMemo(() => applications.data || [], [applications.data])
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return list.filter(

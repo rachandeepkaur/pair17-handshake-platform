@@ -28,7 +28,7 @@ export default function People() {
 
   useEffect(() => {
     setDraft(Object.fromEntries(FIELDS.map(({ name }) => [name, searchParams.get(name) || ''])))
-  }, [paramKey]) // Keep form fields in sync with browser navigation.
+  }, [searchParams]) // Keep form fields in sync with browser navigation.
 
   const { data, loading, error } = useFetch(
     () => searchStudents({ ...filters, limit: PAGE_SIZE, offset }),

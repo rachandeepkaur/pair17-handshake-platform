@@ -1,10 +1,10 @@
-import { createContext, useState } from 'react'
+import { useState } from 'react'
 import { useAppDispatch } from '../app/hooks'
 import { conversationCleared } from '../features/assistant/assistantSlice'
 import { sessionCleared, sessionStarted } from '../features/auth/authSlice'
 import * as authService from '../services/authService'
 
-export const AuthContext = createContext(null)
+import { AuthContext } from './authContextObject'
 
 // Storage is written synchronously (not in an effect) so the very first API
 // call made by the page we navigate to already carries the new token.
