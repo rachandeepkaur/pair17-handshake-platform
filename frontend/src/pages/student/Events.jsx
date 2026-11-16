@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CalendarDays, MapPin, Search } from 'lucide-react'
 import EmptyState from '../../components/ui/EmptyState'
@@ -6,13 +6,21 @@ import ErrorMessage from '../../components/common/ErrorMessage'
 import PageHeader from '../../components/ui/PageHeader'
 import Skeleton from '../../components/ui/Skeleton'
 import { useFetch } from '../../hooks/useFetch'
+import { useAppDispatch, useAppSelector } from '../../app/hooks'
+import { eventsLoaded, selectEvents } from '../../features/events/eventsSlice'
 import { getStudentEvents } from '../../services/studentEventService'
 import { formatDate, formatTime } from '../../utils/format'
 
 export default function StudentEvents() {
+  const dispatch = useAppDispatch()
+  const events = useAppSelector(selectEvents)
   const [draft, setDraft] = useState('')
   const [query, setQuery] = useState('')
-  const { data: events, loading, error } = useFetch(() => getStudentEvents({ q: query }), [query])
+  const { data, loading, error } = useFetch(() => getStudentEvents({ q: query }), [query])
+
+  useEffect(() => {
+    if (data) dispatch(eventsLoaded(data))
+  }, [data, dispatch])
 
   const submit = (event) => {
     event.preventDefault()
@@ -53,7 +61,7 @@ export default function StudentEvents() {
         <Skeleton className="h-56 rounded-2xl" />
         <Skeleton className="h-56 rounded-2xl" />
       </div>
-    ) : events?.length ? (
+    ) : events.length ? (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {events.map((event) => (
           <Link key={event.id} to={`/student/events/${event.id}`} className="block rounded-2xl border border-gray-200 bg-white p-5 shadow-card transition-shadow hover:shadow-card-hover">

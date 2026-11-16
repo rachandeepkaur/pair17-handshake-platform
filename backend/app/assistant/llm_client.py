@@ -72,6 +72,8 @@ class OllamaClient:
         return AssistantMessage(
             content=str(raw_message.get("content") or ""),
             tool_calls=tuple(self._parse_tool_calls(raw_message.get("tool_calls", []))),
+            prompt_tokens=_token_count(body.get("prompt_eval_count")),
+            completion_tokens=_token_count(body.get("eval_count")),
         )
 
     @staticmethod
@@ -100,6 +102,10 @@ class OllamaClient:
                 )
             )
         return tool_calls
+
+
+def _token_count(value: object) -> int:
+    return value if isinstance(value, int) and value >= 0 else 0
 
 
 @lru_cache

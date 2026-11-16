@@ -21,8 +21,8 @@ def search_tool(_context: AssistantContext, arguments: dict[str, object]) -> str
 def test_agent_runs_tool_then_returns_final_answer(capsys) -> None:
     client = FakeClient(
         [
-            AssistantMessage(tool_calls=(ToolCall(name="search_jobs", arguments={"query": "internship"}),)),
-            AssistantMessage(content="I found one internship."),
+            AssistantMessage(tool_calls=(ToolCall(name="search_jobs", arguments={"query": "internship"}),), prompt_tokens=120, completion_tokens=8),
+            AssistantMessage(content="I found one internship.", prompt_tokens=180, completion_tokens=12),
         ]
     )
     registry = ToolRegistry(
@@ -47,6 +47,10 @@ def test_agent_runs_tool_then_returns_final_answer(capsys) -> None:
 
     assert run.answer == "I found one internship."
     assert run.tool_call_count == 1
+    assert run.token_usage.prompt_tokens == 300
+    assert run.token_usage.completion_tokens == 20
+    assert run.token_usage.total_tokens == 320
+    assert run.token_usage.context_percentage == 2.2
     assert run.stopped_at_iteration_limit is False
     tool_message = client.calls[1][-1]
     assert tool_message["role"] == "tool" and tool_message["tool_name"] == "search_jobs"

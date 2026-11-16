@@ -98,3 +98,9 @@ The repair logic is in [backend/app/assistant/repair.py](backend/app/assistant/r
 - **Results vary between runs.** The previous run (2026-10-17, 22 turns) had one lost chain before repair (T21) and none in this run.
 
 Full report: [docs/evaluation/reliability_eval.md](docs/evaluation/reliability_eval.md).
+
+## 4. Deterministic Lab 2 harness
+
+Run `python backend/evaluation/agent_harness.py` from the repository root. It uses scripted model responses with the production assistant loop and writes one JSON object per case to [docs/evaluation/agent_harness.jsonl](docs/evaluation/agent_harness.jsonl).
+
+The latest deterministic run passed **11/11** cases. The harness records the input, assistant messages, tool calls and results, final answer, guardrail outcome, errors, retry count, iteration count, tool-call count, and elapsed time. It covers a read-only search, approved and declined saves, malformed arguments, an unknown tool, no match, a history follow-up, injection before and after the defense, the iteration ceiling, and a recovered text-answer retry.
