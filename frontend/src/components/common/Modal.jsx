@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Button from '../ui/Button'
 
 export default function Modal({ open, title, onClose, children, footer }) {
@@ -17,7 +18,9 @@ export default function Modal({ open, title, onClose, children, footer }) {
 
   if (!open) return null
 
-  return (
+  // Rendered on <body>: an animated (transformed) page wrapper would otherwise
+  // become the containing block for `fixed`, leaving part of the screen uncovered.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-gray-900/40" onClick={onClose} aria-hidden="true" />
       <div
@@ -34,7 +37,8 @@ export default function Modal({ open, title, onClose, children, footer }) {
         <div className="mt-2 text-sm text-gray-600">{children}</div>
         {footer && <div className="mt-6 flex justify-end gap-2">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

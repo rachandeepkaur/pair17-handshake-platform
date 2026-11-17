@@ -2,7 +2,8 @@ import { Bot, Briefcase, CalendarDays, Info, RotateCcw, Search, Sliders } from '
 import Card, { CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import PageHeader from '../../components/ui/PageHeader'
-import ChatWindow, { SUGGESTIONS } from '../../components/assistant/ChatWindow'
+import ChatWindow from '../../components/assistant/ChatWindow'
+import { SUGGESTIONS } from '../../components/assistant/suggestions'
 import { useAssistantChat } from '../../hooks/useAssistantChat'
 
 const CAPABILITIES = [

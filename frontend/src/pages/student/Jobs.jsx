@@ -11,6 +11,7 @@ import { useAppDispatch, useAppSelector } from '../../app/hooks'
 import { jobsLoaded, selectJobs } from '../../features/jobsCompanies/jobsCompaniesSlice'
 import { getStudentJobs } from '../../services/studentJobService'
 import { JOB_CATEGORIES } from '../../utils/constants'
+import Select from '../../components/ui/Select'
 
 export default function StudentJobs() {
   const dispatch = useAppDispatch()
@@ -50,10 +51,7 @@ export default function StudentJobs() {
           <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input name="q" value={draft.q} onChange={change} placeholder="Job title or company" className="h-10 w-full rounded-xl border border-gray-300 pl-10 pr-3 text-sm focus:border-brand-400" />
         </label>
-        <select name="category" value={draft.category} onChange={change} aria-label="Job category" className="h-10 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:border-brand-400">
-          <option value="">All categories</option>
-          {JOB_CATEGORIES.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
-        </select>
+        <Select name="category" value={draft.category} onChange={change} options={[{ value: '', label: 'All categories' }, ...JOB_CATEGORIES]} aria-label="Job category" />
         <input name="city" value={draft.city} onChange={change} placeholder="City" aria-label="City" className="h-10 rounded-xl border border-gray-300 px-3 text-sm focus:border-brand-400" />
         <div className="flex gap-2">
           <button type="submit" className="h-10 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Search</button>

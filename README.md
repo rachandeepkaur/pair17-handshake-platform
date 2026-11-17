@@ -297,6 +297,40 @@ The app is at http://localhost:9170 on Docker Desktop Kubernetes. On other clust
 registry (see the `images:` block in `k8s/base/kustomization.yaml`). On a multi-node cluster,
 `p17-uploads` needs a storage class that supports ReadWriteMany.
 
+### AWS (ECR + EKS)
+
+The deployed stack runs on EKS cluster `p17-handshake` in `us-east-1` (node group
+`p17-nodes-flex`, 2 × `m7i-flex.large`), with the EBS CSI add-on for volumes and the
+`metrics-server` add-on for the HPAs. Sign in with `aws login` (no stored keys), then:
+
+```bash
+k8s/aws/push-images.sh                               # build for linux/amd64, ECR login, tag :1.0.0, push 9 images
+k8s/aws/make-overlay.sh                              # write k8s/overlays/aws (git-ignored: contains the account id)
+KUSTOMIZE_DIR=k8s/overlays/aws k8s/deploy.sh --seed  # namespace, Secret, manifests, rollout, demo data
+kubectl -n p17-handshake get pods,svc,hpa
+kubectl -n p17-handshake get svc p17-frontend -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'   # app at http://<host>:9170
+```
+
+On top of `k8s/base`, the overlay points every image at ECR, makes `p17-uploads`
+ReadWriteOnce (EBS attaches to one node, so student, company and application run 1 replica),
+and raises the load balancer idle timeout to 400 s for slow assistant answers.
+
+**AI assistant on AWS.** There is no host Ollama in EKS, so the overlay also deploys
+[`k8s/aws/p17-ollama.yaml`](k8s/aws/p17-ollama.yaml) (`p17-ollama` Deployment, Service and a
+10 Gi model volume) and points `OLLAMA_HOST` at it. The nodes have no GPU and one physical
+core, so it runs `qwen3:1.7b` instead of `qwen3:8b`: a chat turn with a tool call takes about
+2–3 minutes, and consolidation runs in the background as usual. `qwen3:4b` was tried and
+took over 6 minutes per model call. Set `OLLAMA_MODEL` when running `make-overlay.sh` to
+pick another model, or `OLLAMA_HOST` to use an Ollama server outside the cluster.
+
+**Pause and restore** (keeps images, data and configuration):
+
+```bash
+eksctl scale nodegroup --cluster p17-handshake --region us-east-1 --name p17-nodes-flex --nodes 0 --nodes-min 0   # pause
+eksctl scale nodegroup --cluster p17-handshake --region us-east-1 --name p17-nodes-flex --nodes 2 --nodes-min 2   # restore
+kubectl get nodes && kubectl -n p17-handshake get pods                                                         # wait for Ready / Running
+```
+
 ## Running tests
 
 ```bash

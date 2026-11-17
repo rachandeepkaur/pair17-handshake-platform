@@ -5,6 +5,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { updateApplicationStatus } from '../../services/applicationService'
 import { errorMessage } from '../../services/api'
 import { APPLICATION_STATUSES } from '../../utils/constants'
+import Select from '../ui/Select'
 
 export default function StatusUpdater({ application, onUpdated, compact = false }) {
   const [saving, setSaving] = useState(false)
@@ -44,20 +45,16 @@ export default function StatusUpdater({ application, onUpdated, compact = false 
           Application status
         </label>
       )}
-      <select
+      <Select
         id={id}
+        size="sm"
         value={application.status}
         onChange={handleChange}
         disabled={saving}
+        options={APPLICATION_STATUSES.map((status) => ({ value: status, label: status }))}
         aria-label={compact ? `Status for ${application.student.name}` : undefined}
-        className="h-9 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:border-brand-400 disabled:opacity-60"
-      >
-        {APPLICATION_STATUSES.map((status) => (
-          <option key={status} value={status}>
-            {status}
-          </option>
-        ))}
-      </select>
+        className="w-36"
+      />
       {saving && <span className="ml-2 text-xs text-gray-500">Saving…</span>}
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
 

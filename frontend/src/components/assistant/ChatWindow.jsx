@@ -5,13 +5,7 @@ import MessageBubble from './MessageBubble'
 import ToolCallIndicator from './ToolCallIndicator'
 import ConfirmActionDialog from './ConfirmActionDialog'
 import { toTurns } from '../../hooks/useAssistantChat'
-
-export const SUGGESTIONS = [
-  'Find an internship in my city.',
-  'Find a remote data science internship.',
-  'Find an event for computer science students next month.',
-  'Show me higher-paying full-time jobs.',
-]
+import { SUGGESTIONS } from './suggestions'
 
 export default function ChatWindow({ chat, heightClass = 'h-[28rem]', showSuggestions = true }) {
   const { conversation, draft, setDraft, loading, send, pendingAction, decide, tokenUsage } = chat

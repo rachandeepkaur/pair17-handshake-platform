@@ -9,7 +9,6 @@ export function useFetch(fetcher, deps = []) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const load = useCallback(() => {
     let cancelled = false
     setLoading(true)
@@ -21,7 +20,8 @@ export function useFetch(fetcher, deps = []) {
     return () => {
       cancelled = true
     }
-  }, deps)
+    // Callers pass the dependency list for their fetcher, so it can't be a literal.
+  }, deps) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cancelling on cleanup stops a slow earlier request from overwriting a
   // newer one when deps change quickly (e.g. typing in a search box).

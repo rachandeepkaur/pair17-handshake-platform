@@ -15,6 +15,7 @@ import { getCompanyApplications } from '../../services/applicationService'
 import { getMyJobs } from '../../services/jobService'
 import { APPLICATION_STATUSES } from '../../utils/constants'
 import { formatDate } from '../../utils/format'
+import Select from '../../components/ui/Select'
 
 const COLUMN_ACCENT = { Pending: 'bg-amber-500', Reviewed: 'bg-brand-500', Declined: 'bg-red-500' }
 
@@ -74,7 +75,7 @@ export default function Applicants() {
   const handleUpdated = (updated) =>
     applications.setData((list) => list.map((item) => (item.id === updated.id ? updated : item)))
 
-  const list = applications.data || []
+  const list = useMemo(() => applications.data || [], [applications.data])
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return list.filter(
@@ -133,21 +134,18 @@ export default function Applicants() {
             className="h-10 w-full rounded-xl border border-gray-300 bg-white pl-9 pr-3 text-sm focus:border-brand-400"
           />
         </div>
-        <select
+        <Select
           value={jobId}
           onChange={(event) =>
             setSearchParams(event.target.value ? { job: event.target.value } : {}, { replace: true })
           }
+          options={[
+            { value: '', label: 'All jobs' },
+            ...(jobs.data || []).map((job) => ({ value: String(job.id), label: job.title })),
+          ]}
           aria-label="Filter by job"
-          className="h-10 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:border-brand-400 sm:w-64"
-        >
-          <option value="">All jobs</option>
-          {(jobs.data || []).map((job) => (
-            <option key={job.id} value={job.id}>
-              {job.title}
-            </option>
-          ))}
-        </select>
+          className="sm:w-64"
+        />
       </div>
 
       <ErrorMessage message={applications.error} />
