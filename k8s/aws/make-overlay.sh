@@ -6,7 +6,8 @@
 # On top of k8s/base it:
 #  - points every image at ECR with the version tag
 #  - makes p17-uploads ReadWriteOnce (EBS cannot be shared across nodes) and runs the
-#    three services that mount it as 1 replica, so they never need it on two nodes
+#    three services that mount it as 1 replica with the Recreate strategy, so they never
+#    need it on two nodes
 #  - runs Ollama in the cluster (k8s/aws/p17-ollama.yaml) with a model small enough for
 #    2-vCPU / 8 GiB nodes, and points the assistant and memory worker at it; set
 #    OLLAMA_HOST to use an Ollama server you run elsewhere instead
@@ -45,7 +46,8 @@ fi
   echo "    patch: '[{\"op\": \"replace\", \"path\": \"/spec/accessModes\", \"value\": [\"ReadWriteOnce\"]}]'"
   for svc in student company application; do
     echo "  - target: {kind: Deployment, name: p17-${svc}-service}"
-    echo "    patch: '[{\"op\": \"replace\", \"path\": \"/spec/replicas\", \"value\": 1}]'"
+    # Recreate, not a rolling update: a surge pod on the other node could never attach the volume.
+    echo "    patch: '[{\"op\": \"replace\", \"path\": \"/spec/replicas\", \"value\": 1}, {\"op\": \"replace\", \"path\": \"/spec/strategy\", \"value\": {\"type\": \"Recreate\"}}]'"
     echo "  - target: {kind: HorizontalPodAutoscaler, name: p17-${svc}-service}"
     echo "    patch: '[{\"op\": \"replace\", \"path\": \"/spec/minReplicas\", \"value\": 1}, {\"op\": \"replace\", \"path\": \"/spec/maxReplicas\", \"value\": 1}]'"
   done
