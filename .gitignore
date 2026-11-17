@@ -36,3 +36,8 @@ ananya_lab2_execution_plan.md
 k8s/secrets.env
 # Generated per AWS account by k8s/aws/make-overlay.sh
 k8s/overlays/aws/
+
+# JMeter runtime artifacts (raw .jtl evidence is committed under performance/results/)
+jmeter.log
+performance/results/*.log
+performance/results/*-report/

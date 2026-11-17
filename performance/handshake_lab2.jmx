@@ -180,7 +180,13 @@
         <hashTree>
           <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Set application identity" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
-            <stringProp name="script">int n = ctx.getThreadNum(); int base = (props.get('application_job_base') ?: '1') as int; vars.put('email', String.format('student%03d@seed.p17.example', (n % 200) + 1)); vars.put('password', 'SeedPass17!'); vars.put('job_id', Integer.toString(base + (n / 200)))</stringProp>
+            <stringProp name="script">int n = ctx.getThreadNum()
+int base = (props.get('application_job_base') ?: '1') as int
+int jobOffset = n.intdiv(200)
+
+vars.put('email', String.format('student%03d@seed.p17.example', (n % 200) + 1))
+vars.put('password', 'SeedPass17!')
+vars.put('job_id', Integer.toString(base + jobOffset))</stringProp>
           </JSR223Sampler>
           <hashTree/>
           <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Login for application" enabled="true">
@@ -234,9 +240,9 @@
             <elementProp name="HTTPsampler.Files" elementType="HTTPFileArgs">
               <collectionProp name="HTTPFileArgs.files">
                 <elementProp name="" elementType="HTTPFileArg">
-                  <stringProp name="File.path">${__P(resume_file,performance/fixtures/load-test-resume.txt)}</stringProp>
+                  <stringProp name="File.path">${__P(resume_file,performance/fixtures/load-test-resume.pdf)}</stringProp>
                   <stringProp name="File.paramname">resume</stringProp>
-                  <stringProp name="File.mimetype">text/plain</stringProp>
+                  <stringProp name="File.mimetype">application/pdf</stringProp>
                 </elementProp>
               </collectionProp>
             </elementProp>

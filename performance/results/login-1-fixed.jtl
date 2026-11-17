@@ -1,0 +1,2 @@
+timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage,bytes,sentBytes,grpThreads,allThreads,URL,Latency,IdleTime,Connect
+1794808975474,629,Login,200,OK,Login 1-1,text,true,,420,309,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,623,0,125

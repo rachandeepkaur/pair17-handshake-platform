@@ -1,0 +1,451 @@
+timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage,bytes,sentBytes,grpThreads,allThreads,URL,Latency,IdleTime,Connect
+1794811219096,32,Set seeded student identity,200,OK,Assistant chat 5-2,text,true,,0,0,2,2,null,0,0,0
+1794811219096,32,Set seeded student identity,200,OK,Assistant chat 5-1,text,true,,0,0,2,2,null,0,0,0
+1794811219294,0,Set seeded student identity,200,OK,Assistant chat 5-3,text,true,,0,0,3,3,null,0,0,0
+1794811219160,223,Login for assistant chat,502,Bad Gateway,Assistant chat 5-2,text,false,,309,348,3,3,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,217,0,132
+1794811219160,223,Login for assistant chat,502,Bad Gateway,Assistant chat 5-1,text,false,,309,348,3,3,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,217,0,132
+1794811219294,164,Login for assistant chat,502,Bad Gateway,Assistant chat 5-3,text,false,,309,348,3,3,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,164,0,81
+1794811219492,1,Set seeded student identity,200,OK,Assistant chat 5-4,text,true,,0,0,4,4,null,0,0,0
+1794811219393,171,Assistant chat,401,Unauthorized,Assistant chat 5-2,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,4,4,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,170,0,81
+1794811219393,171,Assistant chat,401,Unauthorized,Assistant chat 5-1,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,4,4,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,170,0,81
+1794811219458,191,Assistant chat,401,Unauthorized,Assistant chat 5-3,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,191,0,92
+1794811219493,170,Login for assistant chat,502,Bad Gateway,Assistant chat 5-4,text,false,,309,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,170,0,79
+1794811219695,0,Set seeded student identity,200,OK,Assistant chat 5-5,text,true,,0,0,2,2,null,0,0,0
+1794811219663,176,Assistant chat,401,Unauthorized,Assistant chat 5-4,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,176,0,87
+1794811219696,165,Login for assistant chat,502,Bad Gateway,Assistant chat 5-5,text,false,,309,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,165,0,81
+1794811219894,1,Set seeded student identity,200,OK,Assistant chat 5-6,text,true,,0,0,2,2,null,0,0,0
+1794811219862,173,Assistant chat,401,Unauthorized,Assistant chat 5-5,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,173,0,78
+1794811219895,182,Login for assistant chat,502,Bad Gateway,Assistant chat 5-6,text,false,,309,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,181,0,82
+1794811220096,1,Set seeded student identity,200,OK,Assistant chat 5-7,text,true,,0,0,2,2,null,0,0,0
+1794811220078,179,Assistant chat,401,Unauthorized,Assistant chat 5-6,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,179,0,89
+1794811220098,171,Login for assistant chat,502,Bad Gateway,Assistant chat 5-7,text,false,,309,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,171,0,78
+1794811220291,0,Set seeded student identity,200,OK,Assistant chat 5-8,text,true,,0,0,2,2,null,0,0,0
+1794811220270,169,Assistant chat,401,Unauthorized,Assistant chat 5-7,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,169,0,86
+1794811220292,172,Login for assistant chat,502,Bad Gateway,Assistant chat 5-8,text,false,,309,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,172,0,82
+1794811220496,1,Set seeded student identity,200,OK,Assistant chat 5-9,text,true,,0,0,2,2,null,0,0,0
+1794811220464,186,Assistant chat,401,Unauthorized,Assistant chat 5-8,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,186,0,85
+1794811220498,173,Login for assistant chat,502,Bad Gateway,Assistant chat 5-9,text,false,,309,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,172,0,83
+1794811220694,1,Set seeded student identity,200,OK,Assistant chat 5-10,text,true,,0,0,2,2,null,0,0,0
+1794811220671,178,Assistant chat,401,Unauthorized,Assistant chat 5-9,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,177,0,85
+1794811220696,176,Login for assistant chat,502,Bad Gateway,Assistant chat 5-10,text,false,,309,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,176,0,86
+1794811220896,0,Set seeded student identity,200,OK,Assistant chat 5-11,text,true,,0,0,2,2,null,0,0,0
+1794811220873,179,Assistant chat,401,Unauthorized,Assistant chat 5-10,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,179,0,87
+1794811220897,160,Login for assistant chat,502,Bad Gateway,Assistant chat 5-11,text,false,,309,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,160,0,76
+1794811221096,1,Set seeded student identity,200,OK,Assistant chat 5-12,text,true,,0,0,2,2,null,0,0,0
+1794811221057,173,Assistant chat,401,Unauthorized,Assistant chat 5-11,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,172,0,86
+1794811221098,156,Login for assistant chat,502,Bad Gateway,Assistant chat 5-12,text,false,,309,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,156,0,75
+1794811221296,1,Set seeded student identity,200,OK,Assistant chat 5-13,text,true,,0,0,2,2,null,0,0,0
+1794811221255,159,Assistant chat,401,Unauthorized,Assistant chat 5-12,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,159,0,76
+1794811221298,163,Login for assistant chat,502,Bad Gateway,Assistant chat 5-13,text,false,,309,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,163,0,77
+1794811221495,1,Set seeded student identity,200,OK,Assistant chat 5-14,text,true,,0,0,2,2,null,0,0,0
+1794811221461,176,Assistant chat,401,Unauthorized,Assistant chat 5-13,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,176,0,86
+1794811221496,179,Login for assistant chat,502,Bad Gateway,Assistant chat 5-14,text,false,,309,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,178,0,86
+1794811221695,0,Set seeded student identity,200,OK,Assistant chat 5-15,text,true,,0,0,2,2,null,0,0,0
+1794811221675,179,Assistant chat,401,Unauthorized,Assistant chat 5-14,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,179,0,86
+1794811221895,1,Set seeded student identity,200,OK,Assistant chat 5-16,text,true,,0,0,2,2,null,0,0,0
+1794811221896,175,Login for assistant chat,502,Bad Gateway,Assistant chat 5-16,text,false,,309,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,175,0,82
+1794811222095,1,Set seeded student identity,200,OK,Assistant chat 5-17,text,true,,0,0,3,3,null,0,0,0
+1794811222072,179,Assistant chat,401,Unauthorized,Assistant chat 5-16,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,3,3,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,179,0,85
+1794811222097,172,Login for assistant chat,502,Bad Gateway,Assistant chat 5-17,text,false,,309,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,172,0,78
+1794811222294,1,Set seeded student identity,200,OK,Assistant chat 5-18,text,true,,0,0,3,3,null,0,0,0
+1794811222270,179,Assistant chat,401,Unauthorized,Assistant chat 5-17,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,3,3,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,179,0,88
+1794811222496,1,Set seeded student identity,200,OK,Assistant chat 5-19,text,true,,0,0,3,3,null,0,0,0
+1794811222498,172,Login for assistant chat,502,Bad Gateway,Assistant chat 5-19,text,false,,309,348,3,3,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,172,0,80
+1794811222694,0,Set seeded student identity,200,OK,Assistant chat 5-20,text,true,,0,0,4,4,null,0,0,0
+1794811222670,177,Assistant chat,401,Unauthorized,Assistant chat 5-19,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,4,4,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,177,0,80
+1794811222695,180,Login for assistant chat,502,Bad Gateway,Assistant chat 5-20,text,false,,309,348,3,3,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,180,0,82
+1794811222895,1,Set seeded student identity,200,OK,Assistant chat 5-21,text,true,,0,0,4,4,null,0,0,0
+1794811222876,189,Assistant chat,401,Unauthorized,Assistant chat 5-20,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,4,4,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,189,0,98
+1794811223094,1,Set seeded student identity,200,OK,Assistant chat 5-22,text,true,,0,0,4,4,null,0,0,0
+1794811223293,0,Set seeded student identity,200,OK,Assistant chat 5-23,text,true,,0,0,5,5,null,0,0,0
+1794811223294,161,Login for assistant chat,502,Bad Gateway,Assistant chat 5-23,text,false,,309,348,5,5,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,161,0,75
+1794811223496,0,Set seeded student identity,200,OK,Assistant chat 5-24,text,true,,0,0,6,6,null,0,0,0
+1794811223456,172,Assistant chat,401,Unauthorized,Assistant chat 5-23,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,6,6,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,172,0,81
+1794811223497,179,Login for assistant chat,502,Bad Gateway,Assistant chat 5-24,text,false,,309,348,5,5,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,179,0,91
+1794811223696,1,Set seeded student identity,200,OK,Assistant chat 5-25,text,true,,0,0,6,6,null,0,0,0
+1794811223677,174,Assistant chat,401,Unauthorized,Assistant chat 5-24,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,6,6,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,174,0,84
+1794811223895,1,Set seeded student identity,200,OK,Assistant chat 5-26,text,true,,0,0,6,6,null,0,0,0
+1794811224096,1,Set seeded student identity,200,OK,Assistant chat 5-27,text,true,,0,0,7,7,null,0,0,0
+1794811224294,1,Set seeded student identity,200,OK,Assistant chat 5-28,text,true,,0,0,8,8,null,0,0,0
+1794811224296,163,Login for assistant chat,502,Bad Gateway,Assistant chat 5-28,text,false,,309,348,8,8,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,163,0,79
+1794811224497,0,Set seeded student identity,200,OK,Assistant chat 5-29,text,true,,0,0,9,9,null,0,0,0
+1794811224460,171,Assistant chat,401,Unauthorized,Assistant chat 5-28,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,9,9,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,171,0,81
+1794811224695,1,Set seeded student identity,200,OK,Assistant chat 5-30,text,true,,0,0,9,9,null,0,0,0
+1794811224697,175,Login for assistant chat,502,Bad Gateway,Assistant chat 5-30,text,false,,309,348,9,9,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,175,0,86
+1794811224893,0,Set seeded student identity,200,OK,Assistant chat 5-31,text,true,,0,0,10,10,null,0,0,0
+1794811224873,186,Assistant chat,401,Unauthorized,Assistant chat 5-30,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,10,10,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,186,0,97
+1794811225095,0,Set seeded student identity,200,OK,Assistant chat 5-32,text,true,,0,0,10,10,null,0,0,0
+1794811225296,1,Set seeded student identity,200,OK,Assistant chat 5-33,text,true,,0,0,11,11,null,0,0,0
+1794811223095,2281,Login for assistant chat,502,Bad Gateway,Assistant chat 5-22,text,false,,309,348,11,11,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,2281,0,83
+1794811225495,1,Set seeded student identity,200,OK,Assistant chat 5-34,text,true,,0,0,12,12,null,0,0,0
+1794811225378,176,Assistant chat,401,Unauthorized,Assistant chat 5-22,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,12,12,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,176,0,86
+1794811225697,0,Set seeded student identity,200,OK,Assistant chat 5-35,text,true,,0,0,12,12,null,0,0,0
+1794811225896,1,Set seeded student identity,200,OK,Assistant chat 5-36,text,true,,0,0,13,13,null,0,0,0
+1794811223697,2276,Login for assistant chat,502,Bad Gateway,Assistant chat 5-25,text,false,,309,348,13,13,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,2276,0,81
+1794811226096,1,Set seeded student identity,200,OK,Assistant chat 5-37,text,true,,0,0,14,14,null,0,0,0
+1794811225975,175,Assistant chat,401,Unauthorized,Assistant chat 5-25,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,14,14,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,175,0,83
+1794811226295,0,Set seeded student identity,200,OK,Assistant chat 5-38,text,true,,0,0,14,14,null,0,0,0
+1794811226296,175,Login for assistant chat,502,Bad Gateway,Assistant chat 5-38,text,false,,309,348,14,14,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,175,0,82
+1794811226496,1,Set seeded student identity,200,OK,Assistant chat 5-39,text,true,,0,0,15,15,null,0,0,0
+1794811226472,166,Assistant chat,401,Unauthorized,Assistant chat 5-38,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,15,15,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,165,0,77
+1794811226697,0,Set seeded student identity,200,OK,Assistant chat 5-40,text,true,,0,0,15,15,null,0,0,0
+1794811226698,174,Login for assistant chat,502,Bad Gateway,Assistant chat 5-40,text,false,,309,348,15,15,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,173,0,89
+1794811226896,0,Set seeded student identity,200,OK,Assistant chat 5-41,text,true,,0,0,16,16,null,0,0,0
+1794811226872,187,Assistant chat,401,Unauthorized,Assistant chat 5-40,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,16,16,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,187,0,92
+1794811227098,0,Set seeded student identity,200,OK,Assistant chat 5-42,text,true,,0,0,16,16,null,0,0,0
+1794811227296,0,Set seeded student identity,200,OK,Assistant chat 5-43,text,true,,0,0,17,17,null,0,0,0
+1794811224097,3279,Login for assistant chat,502,Bad Gateway,Assistant chat 5-27,text,false,,309,348,17,17,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,3279,0,81
+1794811227496,0,Set seeded student identity,200,OK,Assistant chat 5-44,text,true,,0,0,18,18,null,0,0,0
+1794811227378,173,Assistant chat,401,Unauthorized,Assistant chat 5-27,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,18,18,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,173,0,81
+1794811222296,5356,Login for assistant chat,502,Bad Gateway,Assistant chat 5-18,text,false,,309,348,17,17,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,5356,0,91
+1794811227695,1,Set seeded student identity,200,OK,Assistant chat 5-45,text,true,,0,0,18,18,null,0,0,0
+1794811227653,184,Assistant chat,401,Unauthorized,Assistant chat 5-18,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,18,18,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,184,0,91
+1794811227895,1,Set seeded student identity,200,OK,Assistant chat 5-46,text,true,,0,0,18,18,null,0,0,0
+1794811228093,1,Set seeded student identity,200,OK,Assistant chat 5-47,text,true,,0,0,19,19,null,0,0,0
+1794811228297,0,Set seeded student identity,200,OK,Assistant chat 5-48,text,true,,0,0,20,20,null,0,0,0
+1794811228298,168,Login for assistant chat,502,Bad Gateway,Assistant chat 5-48,text,false,,309,348,20,20,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,168,0,85
+1794811228494,1,Set seeded student identity,200,OK,Assistant chat 5-49,text,true,,0,0,21,21,null,0,0,0
+1794811228467,174,Assistant chat,401,Unauthorized,Assistant chat 5-48,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,21,21,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,174,0,86
+1794811228696,0,Set seeded student identity,200,OK,Assistant chat 5-50,text,true,,0,0,21,21,null,0,0,0
+1794811227696,1251,Login for assistant chat,502,Bad Gateway,Assistant chat 5-45,text,false,,309,348,21,21,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,1251,0,79
+1794811228948,171,Assistant chat,401,Unauthorized,Assistant chat 5-45,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,21,21,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,171,0,84
+1794811227297,2248,Login for assistant chat,502,Bad Gateway,Assistant chat 5-43,text,false,,309,348,20,20,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,2247,0,89
+1794811225297,4357,Login for assistant chat,502,Bad Gateway,Assistant chat 5-33,text,false,,309,348,20,20,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,4357,0,80
+1794811229546,180,Assistant chat,401,Unauthorized,Assistant chat 5-43,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,20,20,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,180,0,90
+1794811229654,181,Assistant chat,401,Unauthorized,Assistant chat 5-33,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,19,19,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,180,0,91
+1794811228496,2244,Login for assistant chat,502,Bad Gateway,Assistant chat 5-49,text,false,,309,348,18,18,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,2243,0,88
+1794811230742,180,Assistant chat,401,Unauthorized,Assistant chat 5-49,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,18,18,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,180,0,88
+1794811227897,3279,Login for assistant chat,502,Bad Gateway,Assistant chat 5-46,text,false,,309,348,17,17,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,3279,0,84
+1794811231177,169,Assistant chat,401,Unauthorized,Assistant chat 5-46,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,17,17,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,169,0,79
+1794811228095,3286,Login for assistant chat,502,Bad Gateway,Assistant chat 5-47,text,false,,309,348,16,16,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,3286,0,82
+1794811231381,176,Assistant chat,401,Unauthorized,Assistant chat 5-47,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,16,16,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,176,0,86
+1794811224894,7518,Login for assistant chat,502,Bad Gateway,Assistant chat 5-31,text,false,,309,348,15,15,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,7518,0,76
+1794811232413,187,Assistant chat,401,Unauthorized,Assistant chat 5-31,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,15,15,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,186,0,98
+1794811227497,5407,Login for assistant chat,502,Bad Gateway,Assistant chat 5-44,text,false,,309,348,14,14,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,5407,0,77
+1794811232905,175,Assistant chat,401,Unauthorized,Assistant chat 5-44,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,14,14,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,175,0,84
+1794811225898,7479,Login for assistant chat,502,Bad Gateway,Assistant chat 5-36,text,false,,309,348,13,13,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,7479,0,76
+1794811233378,174,Assistant chat,401,Unauthorized,Assistant chat 5-36,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,13,13,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,173,0,89
+1794811226098,7478,Login for assistant chat,502,Bad Gateway,Assistant chat 5-37,text,false,,309,348,12,12,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,7478,0,80
+1794811233577,163,Assistant chat,401,Unauthorized,Assistant chat 5-37,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,12,12,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,162,0,78
+1794811222898,11519,Login for assistant chat,502,Bad Gateway,Assistant chat 5-21,text,false,,309,348,11,11,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,11519,0,76
+1794811227098,7447,Login for assistant chat,502,Bad Gateway,Assistant chat 5-42,text,false,,309,348,11,11,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,7447,0,81
+1794811234419,180,Assistant chat,401,Unauthorized,Assistant chat 5-21,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,11,11,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,180,0,88
+1794811234546,190,Assistant chat,401,Unauthorized,Assistant chat 5-42,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,10,10,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,190,0,91
+1794811223897,11571,Login for assistant chat,502,Bad Gateway,Assistant chat 5-26,text,false,,309,348,9,9,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,11571,0,86
+1794811235470,172,Assistant chat,401,Unauthorized,Assistant chat 5-26,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,9,9,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,172,0,86
+1794811225096,11518,Login for assistant chat,502,Bad Gateway,Assistant chat 5-32,text,false,,309,348,8,8,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,11518,0,78
+1794811236614,181,Assistant chat,401,Unauthorized,Assistant chat 5-32,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,8,8,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,181,0,90
+1794811225496,11565,Login for assistant chat,502,Bad Gateway,Assistant chat 5-34,text,false,,309,348,7,7,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,11565,0,83
+1794811237062,179,Assistant chat,401,Unauthorized,Assistant chat 5-34,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,7,7,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,179,0,94
+1794811226498,11522,Login for assistant chat,502,Bad Gateway,Assistant chat 5-39,text,false,,309,348,6,6,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,11521,0,80
+1794811238021,170,Assistant chat,401,Unauthorized,Assistant chat 5-39,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,6,6,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,170,0,86
+1794811226897,11522,Login for assistant chat,502,Bad Gateway,Assistant chat 5-41,text,false,,309,348,5,5,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,11521,0,86
+1794811238420,175,Assistant chat,401,Unauthorized,Assistant chat 5-41,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,5,5,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,174,0,83
+1794811228697,11566,Login for assistant chat,502,Bad Gateway,Assistant chat 5-50,text,false,,309,348,4,4,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,11566,0,77
+1794811240264,167,Assistant chat,401,Unauthorized,Assistant chat 5-50,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,4,4,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,166,0,76
+1794811221696,19616,Login for assistant chat,502,Bad Gateway,Assistant chat 5-15,text,false,,309,348,3,3,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,19616,0,80
+1794811241314,182,Assistant chat,401,Unauthorized,Assistant chat 5-15,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,3,3,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,182,0,88
+1794811224497,20003,Login for assistant chat,502,Bad Gateway,Assistant chat 5-29,text,false,,309,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,20002,0,84
+1794811244501,176,Assistant chat,401,Unauthorized,Assistant chat 5-29,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,2,2,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,175,0,81
+1794811225698,20079,Login for assistant chat,502,Bad Gateway,Assistant chat 5-35,text,false,,309,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/auth/login,20079,0,96
+1794811245778,179,Assistant chat,401,Unauthorized,Assistant chat 5-35,text,false,"Test failed: code expected to equal /
+
+****** received  : [[[401]]]
+
+****** comparison: [[[200]]]
+
+/",203,348,1,1,http://a1241e9e4817e47a4ba6b98541cb2e55-1211484279.us-east-1.elb.amazonaws.com:9170/api/assistant/chat,178,0,84

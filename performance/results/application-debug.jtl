@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testResults version="1.2">
+<sample t="45" it="0" lt="0" ct="0" ts="1794824236460" s="true" lb="Set application identity" rc="200" rm="OK" tn="Application submission 3-1" dt="text" by="0" sby="0" ng="1" na="1"/>
+<httpSample t="212" it="0" lt="210" ct="8" ts="1794824236537" s="true" lb="Login for application" rc="200" rm="OK" tn="Application submission 3-1" dt="text" by="420" sby="286" ng="1" na="1">
+  <java.net.URL>http://localhost:9170/api/auth/login</java.net.URL>
+</httpSample>
+<httpSample t="13" it="0" lt="13" ct="3" ts="1794824236759" s="false" lb="Application submission" rc="409" rm="Conflict" tn="Application submission 3-1" dt="text" by="204" sby="1062" ng="1" na="1">
+  <assertionResult>
+    <name>Application succeeds</name>
+    <failure>true</failure>
+    <error>false</error>
+    <failureMessage>Test failed: code expected to equal /
+
+****** received  : [[[409]]]
+
+****** comparison: [[[201]]]
+
+/</failureMessage>
+  </assertionResult>
+  <responseData class="java.lang.String">{&quot;detail&quot;:&quot;You have already applied to this job&quot;}</responseData>
+  <cookies class="java.lang.String"></cookies>
+  <method class="java.lang.String">POST</method>
+  <queryString class="java.lang.String">--YrQzdXainOX-fBH140leLyo9ps096mdz7sej9c&#xd;
+Content-Disposition: form-data; name=&quot;resume&quot;; filename=&quot;load-test-resume.pdf&quot;&#xd;
+Content-Type: application/pdf&#xd;
+Content-Transfer-Encoding: binary&#xd;
+&#xd;
+&lt;actual file content, not shown here&gt;&#xd;
+--YrQzdXainOX-fBH140leLyo9ps096mdz7sej9c--&#xd;
+</queryString>
+  <java.net.URL>http://localhost:9170/api/student/jobs/1/apply</java.net.URL>
+</httpSample>
+
+</testResults>
