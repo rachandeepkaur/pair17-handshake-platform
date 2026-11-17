@@ -14,6 +14,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { getMyJobs } from '../../services/jobService'
 import { JOB_CATEGORIES, jobCategoryLabel } from '../../utils/constants'
 import { formatDate, formatSalary, isOnOrAfterToday } from '../../utils/format'
+import Select from '../../components/ui/Select'
 
 const jobStatus = (job) => (isOnOrAfterToday(job.deadline) ? 'Active' : 'Closed')
 
@@ -71,19 +72,13 @@ export default function MyJobs() {
                 className="h-10 w-full rounded-xl border border-gray-300 pl-9 pr-3 text-sm focus:border-brand-400"
               />
             </div>
-            <select
+            <Select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
+              options={[{ value: '', label: 'All types' }, ...JOB_CATEGORIES]}
               aria-label="Filter by employment type"
-              className="h-10 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:border-brand-400"
-            >
-              <option value="">All types</option>
-              {JOB_CATEGORIES.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              className="sm:w-44"
+            />
           </div>
           <Tabs tabs={tabs} value={tab} onChange={setTab} label="Job status" />
         </div>

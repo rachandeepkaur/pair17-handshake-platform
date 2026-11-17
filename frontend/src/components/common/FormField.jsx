@@ -1,3 +1,5 @@
+import Select from '../ui/Select'
+
 const inputClass = (error) =>
   `w-full rounded-xl border px-3 text-sm transition-colors focus:border-brand-400 ${
     error ? 'border-red-400' : 'border-gray-300'
@@ -62,21 +64,17 @@ export function TextAreaField({ label, name, value, onChange, onBlur, error, hin
 export function SelectField({ label, name, value, onChange, onBlur, error, hint, options, ...rest }) {
   return (
     <FieldShell label={label} name={name} error={error} hint={hint}>
-      <select
+      <Select
         id={name}
         name={name}
         value={value}
         onChange={onChange}
         onBlur={onBlur}
-        className={`h-10 bg-white ${inputClass(error)}`}
+        options={options}
+        invalid={Boolean(error)}
+        aria-describedby={error ? `${name}-error` : undefined}
         {...rest}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      />
     </FieldShell>
   )
 }

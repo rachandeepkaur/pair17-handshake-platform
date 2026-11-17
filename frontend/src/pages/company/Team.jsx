@@ -23,6 +23,7 @@ import {
   updateMemberRole,
 } from '../../services/teamService'
 import { formatDate, formatRelative } from '../../utils/format'
+import Select from '../../components/ui/Select'
 
 const ROLE_STYLES = {
   owner: 'bg-brand-50 text-brand-700',
@@ -72,21 +73,17 @@ function MemberRow({ member, roles, canManage, onChanged, onRemove }) {
       <td className="px-5 py-3">
         {editable ? (
           <>
-            <select
+            <Select
+              size="sm"
               value={member.role}
               onChange={changeRole}
               disabled={saving}
-              aria-label={`Role for ${member.name}`}
-              className="h-9 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:border-brand-400 disabled:opacity-60"
-            >
-              {roles
+              options={roles
                 .filter((role) => role.key !== 'owner')
-                .map((role) => (
-                  <option key={role.key} value={role.key}>
-                    {role.label}
-                  </option>
-                ))}
-            </select>
+                .map((role) => ({ value: role.key, label: role.label }))}
+              aria-label={`Role for ${member.name}`}
+              className="w-44"
+            />
             {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
           </>
         ) : (
